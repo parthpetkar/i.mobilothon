@@ -1,0 +1,172 @@
+[
+  {
+    "id": "p1",
+    "name": "MG Road Parking",
+    "lat": 18.5158,
+    "lng": 73.8762,
+    "price": 30,
+    "slots": 40,
+    "available": 12,
+    "rating": 4.3,
+    "amenities": ["CCTV", "Covered"],
+    "images": [
+      "https://images.unsplash.com/photo-1590674899484-d5640e854abe?w=800",
+      "https://images.unsplash.com/photo-1506521781263-d8422e82f27a?w=800"
+    ],
+    "reviews": [
+      {
+        "id": "r1",
+        "userName": "Rahul Sharma",
+        "rating": 5,
+        "comment": "Great parking facility with good security!",
+        "date": "2025-10-28"
+      },
+      {
+        "id": "r2",
+        "userName": "Priya Desai",
+        "rating": 4,
+        "comment": "Convenient location but slightly expensive.",
+        "date": "2025-10-25"
+      }
+    ]
+  },
+  {
+    "id": "p2",
+    "name": "Phoenix Mall Parking",
+    "lat": 18.5658,
+    "lng": 73.9186,
+    "price": 50,
+    "slots": 100,
+    "available": 54,
+    "rating": 4.7,
+    "amenities": ["CCTV", "EV Charging", "Covered"],
+    "images": [
+      "https://images.unsplash.com/photo-1506521781263-d8422e82f27a?w=800",
+      "https://images.unsplash.com/photo-1590674899484-d5640e854abe?w=800"
+    ],
+    "reviews": [
+      {
+        "id": "r3",
+        "userName": "Amit Patel",
+        "rating": 5,
+        "comment": "Excellent facility with EV charging. Highly recommended!",
+        "date": "2025-10-30"
+      }
+    ]
+  },
+  {
+    "id": "p3",
+    "name": "Deccan Plaza Parking",
+    "lat": 18.5169,
+    "lng": 73.8364,
+    "price": 25,
+    "slots": 60,
+    "available": 8,
+    "rating": 4.1,
+    "amenities": ["CCTV", "Toilets"],
+    "images": [
+      "https://images.unsplash.com/photo-1590674899484-d5640e854abe?w=800"
+    ],
+    "reviews": []
+  },
+  {
+    "id": "p4",
+    "name": "Koregaon Park Secure Parking",
+    "lat": 18.541,
+    "lng": 73.8978,
+    "price": 40,
+    "slots": 50,
+    "available": 22,
+    "rating": 4.5,
+    "amenities": ["CCTV", "Covered", "EV Charging", "Toilets"],
+    "images": [
+      "https://images.unsplash.com/photo-1506521781263-d8422e82f27a?w=800"
+    ],
+    "reviews": [
+      {
+        "id": "r4",
+        "userName": "Sneha Kulkarni",
+        "rating": 4,
+        "comment": "Well maintained and secure.",
+        "date": "2025-10-29"
+      }
+    ]
+  },
+  {
+    "id": "p5",
+    "name": "Camp Street Parking",
+    "lat": 18.5075,
+    "lng": 73.8795,
+    "price": 20,
+    "slots": 30,
+    "available": 5,
+    "rating": 3.9,
+    "amenities": ["CCTV"],
+    "images": [
+      "https://images.unsplash.com/photo-1590674899484-d5640e854abe?w=800"
+    ],
+    "reviews": []
+  },
+  {
+    "id": "p6",
+    "name": "Hinjewadi Tech Park",
+    "lat": 18.5912,
+    "lng": 73.7389,
+    "price": 35,
+    "slots": 150,
+    "available": 89,
+    "rating": 4.6,
+    "amenities": ["CCTV", "Covered", "EV Charging"],
+    "images": [
+      "https://images.unsplash.com/photo-1506521781263-d8422e82f27a?w=800",
+      "https://images.unsplash.com/photo-1590674899484-d5640e854abe?w=800"
+    ],
+    "reviews": [
+      {
+        "id": "r5",
+        "userName": "Vikram Singh",
+        "rating": 5,
+        "comment": "Perfect for office parking. Large capacity!",
+        "date": "2025-11-01"
+      }
+    ]
+  },
+  {
+    "id": "p7",
+    "name": "FC Road Central",
+    "lat": 18.5285,
+    "lng": 73.8382,
+    "price": 28,
+    "slots": 45,
+    "available": 15,
+    "rating": 4.2,
+    "amenities": ["CCTV", "Toilets"],
+    "images": [
+      "https://images.unsplash.com/photo-1590674899484-d5640e854abe?w=800"
+    ],
+    "reviews": []
+  },
+  {
+    "id": "p8",
+    "name": "Baner Smart Parking",
+    "lat": 18.5593,
+    "lng": 73.7768,
+    "price": 32,
+    "slots": 80,
+    "available": 42,
+    "rating": 4.4,
+    "amenities": ["CCTV", "Covered", "EV Charging"],
+    "images": [
+      "https://images.unsplash.com/photo-1506521781263-d8422e82f27a?w=800"
+    ],
+    "reviews": [
+      {
+        "id": "r6",
+        "userName": "Anjali Mehta",
+        "rating": 4,
+        "comment": "Good location and facilities.",
+        "date": "2025-10-27"
+      }
+    ]
+  }
+]

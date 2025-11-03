@@ -1,0 +1,50 @@
+[
+  {
+    "lat": 18.5207,
+    "lng": 73.8569,
+    "probability": 0.82,
+    "label": "JM Road"
+  },
+  {
+    "lat": 18.5141,
+    "lng": 73.853,
+    "probability": 0.63,
+    "label": "FC Road"
+  },
+  {
+    "lat": 18.5296,
+    "lng": 73.8499,
+    "probability": 0.74,
+    "label": "Shivaji Nagar"
+  },
+  {
+    "lat": 18.5065,
+    "lng": 73.8533,
+    "probability": 0.9,
+    "label": "Camp Area"
+  },
+  {
+    "lat": 18.5314,
+    "lng": 73.8447,
+    "probability": 0.68,
+    "label": "Deccan Gymkhana"
+  },
+  {
+    "lat": 18.5089,
+    "lng": 73.8553,
+    "probability": 0.85,
+    "label": "Koregaon Park"
+  },
+  {
+    "lat": 18.5362,
+    "lng": 73.8248,
+    "probability": 0.71,
+    "label": "Kothrud"
+  },
+  {
+    "lat": 18.5074,
+    "lng": 73.9077,
+    "probability": 0.79,
+    "label": "Hadapsar"
+  }
+]
