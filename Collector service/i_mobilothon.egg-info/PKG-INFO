@@ -1,0 +1,13 @@
+Metadata-Version: 2.4
+Name: i-mobilothon
+Version: 0.1.0
+Summary: Add your description here
+Requires-Python: >=3.12
+Description-Content-Type: text/markdown
+Requires-Dist: aio-pika>=9.5.7
+Requires-Dist: asyncio>=4.0.0
+Requires-Dist: fastapi[standard]>=0.120.4
+Requires-Dist: httpx>=0.28.1
+Requires-Dist: pydantic>=2.12.3
+Requires-Dist: python-dotenv>=1.2.1
+Requires-Dist: uvicorn[standard]>=0.38.0
