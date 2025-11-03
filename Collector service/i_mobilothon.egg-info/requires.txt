@@ -1,0 +1,7 @@
+aio-pika>=9.5.7
+asyncio>=4.0.0
+fastapi[standard]>=0.120.4
+httpx>=0.28.1
+pydantic>=2.12.3
+python-dotenv>=1.2.1
+uvicorn[standard]>=0.38.0
