@@ -1,87 +1,43 @@
-# main.py
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from typing import List, Optional, Dict, Any
-
+from typing import List, Dict, Any, Optional
 from collectors import (
-    run_traffic_collector,
     run_places_collector,
+    run_traffic_collector,
     run_weather_collector,
     run_events_collector,
     run_grids_collector,
 )
 
-app = FastAPI(title="Collectors API (Overpass primary places)", version="3.1")
+app = FastAPI(title="Collector Service", version="1.0.0")
 
-
-class GridCell(BaseModel):
+class Grid(BaseModel):
     id: str
-    centroid: List[float]  # [lon, lat]
+    centroid: List[float]
     bbox: Optional[List[float]] = None
-    metadata: Dict[str, Any] = {}
+    metadata: Optional[Dict[str, Any]] = {}
 
-
-class TrafficRequest(BaseModel):
-    grids: List[GridCell]
-
-
-class PlacesRequest(BaseModel):
-    grids: Optional[List[GridCell]] = None
-    device_location: Optional[List[float]] = None  # [lon, lat]
+class PlacesReq(BaseModel):
+    grids: List[Grid]
     categories: Optional[List[str]] = None
     radius_meters: Optional[int] = 1000
     max_results: Optional[int] = 500
-    debug: Optional[bool] = False
 
-
-class WeatherRequest(BaseModel):
-    grids: List[GridCell]
-
-
-class EventsRequest(BaseModel):
+class TrafficReq(BaseModel): grids: List[Grid]
+class WeatherReq(BaseModel): grids: List[Grid]
+class EventsReq(BaseModel):
+    location: Optional[List[float]] = None
     bbox: Optional[List[float]] = None
     city: Optional[str] = None
-
-
-class GridsRequest(BaseModel):
-    grids: List[GridCell]
-
-
-@app.post("/collectors/traffic")
-async def collectors_traffic(req: TrafficRequest):
-    try:
-        return await run_traffic_collector(req.dict())
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Traffic collector error: {e}")
-
+class GridsReq(BaseModel): grids: List[Grid]
 
 @app.post("/collectors/places")
-async def collectors_places(req: PlacesRequest):
-    try:
-        return await run_places_collector(req.dict())
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Places collector error: {e}")
-
-
+async def collect_places(req: PlacesReq): return await run_places_collector(req.dict())
+@app.post("/collectors/traffic")
+async def collect_traffic(req: TrafficReq): return await run_traffic_collector(req.dict())
 @app.post("/collectors/weather")
-async def collectors_weather(req: WeatherRequest):
-    try:
-        return await run_weather_collector(req.dict())
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Weather collector error: {e}")
-
-
+async def collect_weather(req: WeatherReq): return await run_weather_collector(req.dict())
 @app.post("/collectors/events")
-async def collectors_events(req: EventsRequest):
-    try:
-        return await run_events_collector(req.dict())
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Events collector error: {e}")
-
-
+async def collect_events(req: EventsReq): return await run_events_collector(req.dict())
 @app.post("/collectors/grids")
-async def collectors_grids(req: GridsRequest):
-    try:
-        return await run_grids_collector(req.dict())
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Grids collector error: {e}")
+async def collect_grids(req: GridsReq): return await run_grids_collector(req.dict())
