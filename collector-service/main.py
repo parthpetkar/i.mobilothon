@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
 from collectors import (
@@ -23,21 +23,36 @@ class PlacesReq(BaseModel):
     radius_meters: Optional[int] = 1000
     max_results: Optional[int] = 500
 
-class TrafficReq(BaseModel): grids: List[Grid]
-class WeatherReq(BaseModel): grids: List[Grid]
+class TrafficReq(BaseModel): 
+    grids: List[Grid]
+    
+class WeatherReq(BaseModel): 
+    grids: List[Grid]
+
 class EventsReq(BaseModel):
     location: Optional[List[float]] = None
     bbox: Optional[List[float]] = None
     city: Optional[str] = None
-class GridsReq(BaseModel): grids: List[Grid]
+
+class GridsReq(BaseModel): 
+    grids: List[Grid]
 
 @app.post("/collectors/places")
-async def collect_places(req: PlacesReq): return await run_places_collector(req.dict())
+async def collect_places(req: PlacesReq): 
+    return await run_places_collector(req.model_dump())
+
 @app.post("/collectors/traffic")
-async def collect_traffic(req: TrafficReq): return await run_traffic_collector(req.dict())
+async def collect_traffic(req: TrafficReq): 
+    return await run_traffic_collector(req.model_dump())
+
 @app.post("/collectors/weather")
-async def collect_weather(req: WeatherReq): return await run_weather_collector(req.dict())
+async def collect_weather(req: WeatherReq): 
+    return await run_weather_collector(req.model_dump())
+
 @app.post("/collectors/events")
-async def collect_events(req: EventsReq): return await run_events_collector(req.dict())
+async def collect_events(req: EventsReq): 
+    return await run_events_collector(req.model_dump())
+
 @app.post("/collectors/grids")
-async def collect_grids(req: GridsReq): return await run_grids_collector(req.dict())
+async def collect_grids(req: GridsReq): 
+    return await run_grids_collector(req.model_dump())

@@ -202,6 +202,7 @@ export default function MapHomeScreen({ navigation }: any) {
         id: `hotspot-${index}`,
         properties: {
           probability: hotspot.probability,
+          radius: hotspot.radius || 100, // Use custom radius in meters or default to 100m
         },
         geometry: {
           type: 'Point' as const,
@@ -231,7 +232,14 @@ export default function MapHomeScreen({ navigation }: any) {
             <CircleLayer
               id="heatmapCircles"
               style={{
-                circleRadius: 50,
+                circlePitchAlignment: 'map',
+                circleRadius: [
+                  'interpolate',
+                  ['exponential', 2],
+                  ['zoom'],
+                  0, 0,
+                  20, ['*', ['/', ['get', 'radius'], 0.075], ['/', 1, ['^', 2, ['-', 20, ['zoom']]]]]
+                ],
                 circleColor: [
                   'interpolate',
                   ['linear'],
@@ -298,6 +306,11 @@ export default function MapHomeScreen({ navigation }: any) {
                   setSelectedParking(null);
                   setSelectedHotspot(hotspot);
                 }}
+                onPressOut={() => {
+                  console.log('Hotspot touched:', hotspot.label);
+                  setSelectedParking(null);
+                  setSelectedHotspot(hotspot);
+                }}
                 activeOpacity={0.7}
                 hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
               >
@@ -321,6 +334,11 @@ export default function MapHomeScreen({ navigation }: any) {
                 ]}
                 onPress={() => {
                   console.log('Parking clicked:', parking.name);
+                  setSelectedHotspot(null);
+                  setSelectedParking(parking);
+                }}
+                onPressOut={() => {
+                  console.log('Parking touched:', parking.name);
                   setSelectedHotspot(null);
                   setSelectedParking(parking);
                 }}

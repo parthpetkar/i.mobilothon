@@ -5,6 +5,7 @@ export interface FreeHotspot {
   lng: number;
   probability: number;
   label: string;
+  radius?: number; // Radius in meters for the hotspot circle (geographic distance)
 }
 
 export interface PaidParking {
