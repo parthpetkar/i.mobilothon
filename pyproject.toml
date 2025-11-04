@@ -1,0 +1,14 @@
+[project]
+name = "i-mobilothon"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "aio-pika>=9.5.7",
+    "asyncio>=4.0.0",
+    "fastapi>=0.121.0",
+    "httpx>=0.28.1",
+    "python-dotenv>=1.2.1",
+    "uvicorn[standard]>=0.38.0",
+]
