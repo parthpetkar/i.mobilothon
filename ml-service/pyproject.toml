@@ -1,0 +1,18 @@
+[project]
+name = "ml-service"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.121.0",
+    "holidays>=0.84",
+    "joblib>=1.5.2",
+    "numpy>=2.3.4",
+    "pandas>=2.3.3",
+    "python-dotenv>=1.2.1",
+    "pytz>=2025.2",
+    "supabase>=2.23.2",
+    "uvicorn>=0.38.0",
+    "xgboost>=3.1.1",
+]
