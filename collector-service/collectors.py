@@ -90,6 +90,7 @@ async def run_places_collector(payload: Dict[str, Any]) -> Dict[str, Any]:
                         el_lon, el_lat = center.get("lon"), center.get("lat")
                     tags = el.get("tags", {})
                     places.append({
+                        "id": el.get("id"),  # OSM ID for the parking spot
                         "name": tags.get("name", "Unnamed"),
                         "lat": el_lat,
                         "lon": el_lon,

@@ -7,11 +7,16 @@ requires-python = ">=3.12"
 dependencies = [
     "aio-pika>=9.5.7",
     "asyncio>=4.0.0",
-    "fastapi[standard]>=0.120.4",
+    "fastapi[standard,standerd]>=0.120.4",
     "httpx>=0.28.1",
     "pydantic>=2.12.3",
     "python-dotenv>=1.2.1",
     "uvicorn[standard]>=0.38.0",
+    "pandas>=2.2.0",
+    "numpy>=2.1.0",
+    "pytz>=2024.1",
+    "holidays>=0.58",
+    "supabase>=2.9.0",
 ]
 
 [tool.setuptools]
