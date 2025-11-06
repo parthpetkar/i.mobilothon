@@ -39,7 +39,7 @@ async def get_parkings(  # Now async
 
         processed.append(ParkingResponse(**p_copy))
         
-        return processed
+    return processed
 
 # @router.post("/", response_model=dict)
 @router.post("/", response_model=Dict[str, ParkingResponse])
