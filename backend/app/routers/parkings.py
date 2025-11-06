@@ -30,25 +30,16 @@ async def get_parkings(  # Now async
     processed = []
     for p in parkings_data:
         p_copy = p.copy()
-        # RPC should return 'location' as list; ensure floats
-        if "location" in p_copy and isinstance(p_copy["location"], list):
-            p_copy["location"] = [float(l) for l in p_copy["location"]]
-        else:
-            # Fallback: Extract from geom if RPC fails (add ST_X/ST_Y in RPC)
-            from app.database import client
-            geom_resp = client.rpc("ST_AsText", {"geom": p_copy.get("geom", "POINT(0 0)")}).execute()
-            if geom_resp.data:
-                # Parse 'POINT(lng lat)' – simplistic
-                point_str = geom_resp.data[0].get("st_astext", "POINT(0 0)")
-                coords = point_str.replace("POINT(", "").replace(")", "").split()
-                p_copy["location"] = [float(coords[0]), float(coords[1])] if len(coords) == 2 else [0.0, 0.0]
-            del p_copy["geom"]  # Clean up if present
-        p_copy["price_per_hour"] = Decimal(str(p_copy.get("price_per_hour", 0)))  # Map to Decimal
-        # if "price_per_hour" in p_copy:
-        #     del p_copy["price_per_hour"]
+        
+        if isinstance(p_copy.get("location"), list):
+            p_copy["location"] = [float(x) for x in p_copy["location"]]
+        
+        price = p_copy.get("price_per_hour", 0)
+        p_copy["price_per_hour"] = Decimal(str(price))
+
         processed.append(ParkingResponse(**p_copy))
-    
-    return processed
+        
+        return processed
 
 # @router.post("/", response_model=dict)
 @router.post("/", response_model=Dict[str, ParkingResponse])
