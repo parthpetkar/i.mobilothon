@@ -70,6 +70,8 @@ class SellerParkingResponse(BaseModel):
     available: int
     daily_revenue: Decimal
     rating: Optional[Decimal] = Field(0.00, ge=0, le=5)
+    lat: float
+    lng: float
 
-    class Config:  # Fixed indentation
+    class Config:
         from_attributes = True
