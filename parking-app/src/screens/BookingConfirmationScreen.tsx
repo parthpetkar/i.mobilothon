@@ -7,33 +7,39 @@ import { generateQRCode, formatCurrency } from '../utils/helpers';
 
 export default function BookingConfirmationScreen({ route, navigation }: any) {
   const { parking, duration, totalPrice } = route.params;
-  const { addBooking, user } = useAppStore();
+  const { createBooking, user } = useAppStore();
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [bookingComplete, setBookingComplete] = useState(false);
   const [booking, setBooking] = useState<Booking | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const handlePayment = async () => {
+    if (!user) {
+      setError('Please login to complete booking');
+      return;
+    }
+
     setIsProcessing(true);
-    // Simulate payment processing
-    setTimeout(() => {
-      const newBooking: Booking = {
-        id: `BK${Date.now()}`,
-        userId: user?.id || 'guest',
-        parkingId: parking.id,
-        parkingName: parking.name,
-        duration,
-        totalPrice,
-        timestamp: new Date().toISOString(),
-        qrCode: generateQRCode(`BK${Date.now()}`),
-        status: 'active',
-      };
-      addBooking(newBooking);
+    setError(null);
+
+    try {
+      // Calculate start and end times
+      const startTime = new Date();
+      const endTime = new Date(startTime.getTime() + duration * 60 * 60 * 1000);
+
+      // Create booking via API
+      const newBooking = await createBooking(parseInt(parking.id), startTime, endTime);
+      
       setBooking(newBooking);
       setIsProcessing(false);
       setShowPaymentModal(false);
       setBookingComplete(true);
-    }, 2000);
+    } catch (err: any) {
+      setIsProcessing(false);
+      setError(err.message || 'Failed to create booking. Please try again.');
+      console.error('Booking error:', err);
+    }
   };
 
   if (bookingComplete && booking) {
@@ -178,6 +184,12 @@ export default function BookingConfirmationScreen({ route, navigation }: any) {
               <Text style={styles.paymentLabel}>Amount to Pay</Text>
               <Text style={styles.paymentAmount}>{formatCurrency(totalPrice)}</Text>
             </View>
+
+            {error && (
+              <View style={styles.errorContainer}>
+                <Text style={styles.errorText}>{error}</Text>
+              </View>
+            )}
 
             {isProcessing ? (
               <View style={styles.processingContainer}>
@@ -441,5 +453,17 @@ const styles = StyleSheet.create({
   cancelButtonText: {
     color: '#666',
     fontSize: 16,
+  },
+  errorContainer: {
+    backgroundColor: '#fee2e2',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 15,
+    width: '100%',
+  },
+  errorText: {
+    color: '#dc2626',
+    fontSize: 14,
+    textAlign: 'center',
   },
 });

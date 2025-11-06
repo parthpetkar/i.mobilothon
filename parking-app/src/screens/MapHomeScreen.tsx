@@ -22,7 +22,7 @@ import { searchLocation, getNavigationRoute } from '../utils/mapbox';
 const PUNE_CENTER = [73.8567, 18.5204]; // [lng, lat] for Mapbox
 
 export default function MapHomeScreen({ navigation }: any) {
-  const { viewMode, setViewMode, paidParkings, selectedLocation, setSelectedLocation, setCurrentRoute, currentRoute, user } =
+  const { viewMode, setViewMode, paidParkings, selectedLocation, setSelectedLocation, setCurrentRoute, currentRoute, user, fetchParkingsNear } =
     useAppStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
@@ -66,6 +66,14 @@ export default function MapHomeScreen({ navigation }: any) {
       }
     })();
   }, []);
+
+  // Fetch parkings when location changes (for paid mode)
+  useEffect(() => {
+    if (viewMode === 'paid' && selectedLocation) {
+      const location: [number, number] = [selectedLocation.lng, selectedLocation.lat];
+      fetchParkingsNear(location, 10000); // 10km radius
+    }
+  }, [selectedLocation, viewMode]);
 
   // Handle search with Mapbox Geocoding
   const handleSearchInput = async (query: string) => {
@@ -496,7 +504,7 @@ export default function MapHomeScreen({ navigation }: any) {
             </View>
             <View style={styles.popupPriceItem}>
               <Text style={styles.popupInfoLabel}>Rating</Text>
-              <Text style={styles.popupRating}>⭐ {selectedParking.rating.toFixed(1)}</Text>
+              <Text style={styles.popupRating}>⭐ {selectedParking.rating}</Text>
             </View>
           </View>
           {selectedParking.distance && (
@@ -537,7 +545,7 @@ export default function MapHomeScreen({ navigation }: any) {
                 <Text style={styles.cardAvailable}>
                   {parking.available}/{parking.slots} slots
                 </Text>
-                <Text style={styles.cardRating}>⭐ {parking.rating.toFixed(1)}</Text>
+                <Text style={styles.cardRating}>⭐ {parking.rating}</Text>
               </TouchableOpacity>
             ))}
           </ScrollView>

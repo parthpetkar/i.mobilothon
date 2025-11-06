@@ -61,7 +61,7 @@ export default function ParkingDetailsScreen({ route, navigation }: any) {
       <View style={styles.infoContainer}>
         <Text style={styles.name}>{parking.name}</Text>
         <View style={styles.ratingContainer}>
-          <Text style={styles.rating}>⭐ {parking.rating.toFixed(1)}</Text>
+          <Text style={styles.rating}>⭐ {parking.rating}</Text>
           <Text style={styles.reviewCount}>
             ({parking.reviews?.length || 0} reviews)
           </Text>

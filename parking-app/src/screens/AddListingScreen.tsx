@@ -16,7 +16,7 @@ import { SellerParking } from '../types';
 const PUNE_CENTER = [73.8567, 18.5204]; // [lng, lat] for Mapbox
 
 export default function AddListingScreen({ navigation }: any) {
-  const { addSellerParking } = useAppStore();
+  const { createSellerParking, user } = useAppStore();
   const [name, setName] = useState('');
   const [price, setPrice] = useState('');
   const [slots, setSlots] = useState('');
@@ -25,6 +25,7 @@ export default function AddListingScreen({ navigation }: any) {
     lng: PUNE_CENTER[0],
   });
   const [selectedAmenities, setSelectedAmenities] = useState<string[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const cameraRef = useRef<Camera>(null);
 
   const availableAmenities = ['CCTV', 'Covered', 'EV Charging', 'Toilets'];
@@ -35,7 +36,13 @@ export default function AddListingScreen({ navigation }: any) {
     );
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+    if (!user) {
+      Alert.alert('Error', 'You must be logged in to add parking');
+      navigation.navigate('Login');
+      return;
+    }
+
     if (!name.trim()) {
       Alert.alert('Error', 'Please enter parking name');
       return;
@@ -49,27 +56,29 @@ export default function AddListingScreen({ navigation }: any) {
       return;
     }
 
-    const newParking: SellerParking = {
-      id: `SP${Date.now()}`,
-      name: name.trim(),
-      lat: location.lat,
-      lng: location.lng,
-      price: parseInt(price),
-      slots: parseInt(slots),
-      available: parseInt(slots),
-      rating: 0,
-      amenities: selectedAmenities,
-      images: [],
-      reviews: [],
-      ownerId: 'seller1',
-      dailyRevenue: 0,
-      occupancyRate: 0,
-    };
+    setIsSubmitting(true);
 
-    addSellerParking(newParking);
-    Alert.alert('Success', 'Parking listing added successfully!', [
-      { text: 'OK', onPress: () => navigation.goBack() },
-    ]);
+    try {
+      const parkingData = {
+        name: name.trim(),
+        location: [location.lng, location.lat] as [number, number],
+        price_per_hour: parseInt(price),
+        slots: parseInt(slots),
+        available: parseInt(slots),
+        amenities: selectedAmenities,
+      };
+
+      await createSellerParking(parkingData);
+      
+      Alert.alert('Success', 'Parking listing added successfully!', [
+        { text: 'OK', onPress: () => navigation.goBack() },
+      ]);
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to add parking. Please try again.');
+      console.error('Add parking error:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -169,8 +178,14 @@ export default function AddListingScreen({ navigation }: any) {
         </View>
 
         {/* Submit Button */}
-        <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-          <Text style={styles.submitButtonText}>Add Parking</Text>
+        <TouchableOpacity 
+          style={[styles.submitButton, isSubmitting && styles.submitButtonDisabled]} 
+          onPress={handleSubmit}
+          disabled={isSubmitting}
+        >
+          <Text style={styles.submitButtonText}>
+            {isSubmitting ? 'Adding Parking...' : 'Add Parking'}
+          </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -277,6 +292,9 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: 'center',
     marginBottom: 15,
+  },
+  submitButtonDisabled: {
+    opacity: 0.6,
   },
   submitButtonText: {
     color: 'white',
