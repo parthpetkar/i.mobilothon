@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,11 +6,21 @@ import {
   StyleSheet,
   ScrollView,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useAppStore } from '../store/appStore';
 
 export default function ProfileScreen({ navigation }: any) {
-  const { user, userProfile, signOut } = useAppStore();
+  const { user, userProfile, signOut, bookings, fetchBookings } = useAppStore();
+  const [isLoadingBookings, setIsLoadingBookings] = React.useState(false);
+
+  useEffect(() => {
+    if (user) {
+      // Fetch user's bookings when profile loads
+      setIsLoadingBookings(true);
+      fetchBookings().finally(() => setIsLoadingBookings(false));
+    }
+  }, [user]);
 
   const handleSignOut = () => {
     Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
@@ -100,6 +110,60 @@ export default function ProfileScreen({ navigation }: any) {
           </TouchableOpacity>
         </View>
       )}
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>My Bookings</Text>
+        {isLoadingBookings ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#3b82f6" />
+            <Text style={styles.loadingText}>Loading bookings...</Text>
+          </View>
+        ) : bookings.length === 0 ? (
+          <View style={styles.emptyBookings}>
+            <Text style={styles.emptyIcon}>🅿️</Text>
+            <Text style={styles.emptyText}>No bookings yet</Text>
+            <Text style={styles.emptySubtext}>
+              Book a parking spot to see it here
+            </Text>
+          </View>
+        ) : (
+          <View style={styles.bookingsContainer}>
+            {bookings.slice(0, 3).map((booking) => (
+              <View key={booking.id} style={styles.bookingCard}>
+                <View style={styles.bookingHeader}>
+                  <Text style={styles.bookingName}>{booking.parkingName}</Text>
+                  <View
+                    style={[
+                      styles.statusBadge,
+                      booking.status === 'active'
+                        ? styles.statusActive
+                        : styles.statusCompleted,
+                    ]}
+                  >
+                    <Text style={styles.statusText}>
+                      {booking.status === 'active' ? 'Active' : 'Completed'}
+                    </Text>
+                  </View>
+                </View>
+                <Text style={styles.bookingDetail}>
+                  Duration: {booking.duration} hours
+                </Text>
+                <Text style={styles.bookingDetail}>
+                  Total: ₹{booking.totalPrice}
+                </Text>
+                <Text style={styles.bookingDate}>
+                  {new Date(booking.timestamp).toLocaleDateString()}
+                </Text>
+              </View>
+            ))}
+            {bookings.length > 3 && (
+              <Text style={styles.moreBookings}>
+                +{bookings.length - 3} more bookings
+              </Text>
+            )}
+          </View>
+        )}
+      </View>
 
       <View style={styles.section}>
         <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
@@ -239,5 +303,85 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  loadingContainer: {
+    backgroundColor: 'white',
+    borderRadius: 15,
+    padding: 40,
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 14,
+    color: '#666',
+  },
+  emptyBookings: {
+    backgroundColor: 'white',
+    borderRadius: 15,
+    padding: 40,
+    alignItems: 'center',
+  },
+  emptyIcon: {
+    fontSize: 60,
+    marginBottom: 15,
+  },
+  emptyText: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 5,
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: '#666',
+  },
+  bookingsContainer: {
+    gap: 10,
+  },
+  bookingCard: {
+    backgroundColor: 'white',
+    borderRadius: 15,
+    padding: 15,
+  },
+  bookingHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  bookingName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    flex: 1,
+  },
+  statusBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 12,
+  },
+  statusActive: {
+    backgroundColor: '#dcfce7',
+  },
+  statusCompleted: {
+    backgroundColor: '#e5e7eb',
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  bookingDetail: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 3,
+  },
+  bookingDate: {
+    fontSize: 12,
+    color: '#999',
+    marginTop: 5,
+  },
+  moreBookings: {
+    textAlign: 'center',
+    fontSize: 14,
+    color: '#3b82f6',
+    marginTop: 10,
   },
 });

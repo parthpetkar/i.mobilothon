@@ -11,7 +11,15 @@ import { useAppStore } from '../store/appStore';
 import { formatCurrency } from '../utils/helpers';
 
 export default function SellerDashboardScreen({ navigation }: any) {
-  const { sellerParkings, updateSellerParking, user, userProfile } = useAppStore();
+  const { 
+    sellerParkings, 
+    sellerAnalytics,
+    updateSellerParkingAvailability, 
+    fetchSellerParkings, 
+    fetchSellerAnalytics,
+    user, 
+    userProfile 
+  } = useAppStore();
 
   // Check if user is authenticated and is a seller
   useEffect(() => {
@@ -27,6 +35,10 @@ export default function SellerDashboardScreen({ navigation }: any) {
         'You need a seller account to access this feature',
         [{ text: 'OK', onPress: () => navigation.goBack() }]
       );
+    } else {
+      // Fetch seller data when component mounts
+      fetchSellerParkings();
+      fetchSellerAnalytics();
     }
   }, [user, userProfile]);
 
@@ -34,7 +46,8 @@ export default function SellerDashboardScreen({ navigation }: any) {
     return null;
   }
 
-  const totalRevenue = sellerParkings.reduce(
+  // Use analytics data from API if available, otherwise calculate from parkings
+  const totalRevenue = sellerAnalytics?.total_revenue || sellerParkings.reduce(
     (sum, parking) => sum + (parking.dailyRevenue || 0),
     0
   );
@@ -43,14 +56,18 @@ export default function SellerDashboardScreen({ navigation }: any) {
     (sum, parking) => sum + (parking.slots - parking.available),
     0
   );
-  const avgOccupancy =
-    totalSlots > 0 ? ((occupiedSlots / totalSlots) * 100).toFixed(1) : 0;
+  const avgOccupancy = sellerAnalytics?.avg_occupancy_rate 
+    || (totalSlots > 0 ? ((occupiedSlots / totalSlots) * 100).toFixed(1) : 0);
 
-  const handleUpdateAvailability = (id: string, change: number) => {
+  const handleUpdateAvailability = async (id: string, change: number) => {
     const parking = sellerParkings.find((p) => p.id === id);
     if (parking) {
       const newAvailable = Math.max(0, Math.min(parking.slots, parking.available + change));
-      updateSellerParking(id, { available: newAvailable });
+      try {
+        await updateSellerParkingAvailability(id, newAvailable);
+      } catch (error) {
+        Alert.alert('Error', 'Failed to update availability. Please try again.');
+      }
     }
   };
 
@@ -102,7 +119,7 @@ export default function SellerDashboardScreen({ navigation }: any) {
                     <Text style={styles.parkingPrice}>{formatCurrency(parking.price)}/hr</Text>
                   </View>
                   <View style={styles.ratingBadge}>
-                    <Text style={styles.ratingText}>⭐ {parking.rating.toFixed(1)}</Text>
+                    <Text style={styles.ratingText}>⭐ {(typeof parking.rating === 'number' ? parking.rating : 0)}</Text>
                   </View>
                 </View>
 
