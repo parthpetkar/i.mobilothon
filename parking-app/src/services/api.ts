@@ -410,8 +410,56 @@ export interface PredictionResponse {
   }>;
 }
 
+export interface FreeParkingSpot {
+  systemCode: string;
+  lat: number;
+  lon: number;
+  availabilityProbability: number;
+  radius: number;
+}
+
+export interface FreeParkingPredictionsResponse {
+  parking_spots: FreeParkingSpot[];
+  count: number;
+  query: {
+    lat: number;
+    lon: number;
+    radius_meters: number;
+  };
+}
+
+/**
+ * Get free parking availability predictions from backend ML
+ */
+export async function getFreeParkingPredictions(
+  lat: number,
+  lon: number,
+  radius_meters: number = 300
+): Promise<FreeHotspot[]> {
+  const url = new URL(`${API_BASE_URL}/predictions/free-parking`);
+  url.searchParams.append('lat', lat.toString());
+  url.searchParams.append('lon', lon.toString());
+  url.searchParams.append('radius_meters', radius_meters.toString());
+  
+  console.log('[API] Fetching free parking predictions:', url.toString());
+  
+  const response: FreeParkingPredictionsResponse = await fetchWithAuth(url.toString());
+  
+  console.log('[API] Free parking predictions response:', response);
+  
+  // Transform to FreeHotspot format
+  return response.parking_spots.map((spot, index) => ({
+    lat: spot.lat,
+    lng: spot.lon,
+    probability: spot.availabilityProbability,
+    label: `Free Parking ${index + 1}`,
+    radius: spot.radius,
+  }));
+}
+
 /**
  * Get parking availability predictions (requires ML service)
+ * @deprecated Use getFreeParkingPredictions instead
  */
 export async function getParkingPredictions(params: PredictionParams): Promise<PredictionResponse> {
   const response = await fetch(`${ML_SERVICE_URL}/predict`, {

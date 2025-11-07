@@ -15,9 +15,9 @@ import Mapbox, { Camera, MarkerView, ShapeSource, CircleLayer, LineLayer, Locati
 import * as Location from 'expo-location';
 import { useAppStore } from '../store/appStore';
 import { FreeHotspot } from '../types';
-import freeHotspotsData from '../data/freeHotspots.json';
 import { calculateDistance, getProbabilityLabel, getAvailabilityColor } from '../utils/helpers';
 import { searchLocation, getNavigationRoute } from '../utils/mapbox';
+import { getFreeParkingPredictions } from '../services/api';
 
 const PUNE_CENTER = [73.8567, 18.5204]; // [lng, lat] for Mapbox
 
@@ -32,9 +32,9 @@ export default function MapHomeScreen({ navigation }: any) {
   const [selectedParking, setSelectedParking] = useState<any>(null);
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
   const [locationPermission, setLocationPermission] = useState(false);
+  const [freeHotspots, setFreeHotspots] = useState<FreeHotspot[]>([]);
+  const [isLoadingPredictions, setIsLoadingPredictions] = useState(false);
   const cameraRef = useRef<Camera>(null);
-
-  const freeHotspots: FreeHotspot[] = freeHotspotsData;
 
   // Get user location on mount
   useEffect(() => {
@@ -66,6 +66,40 @@ export default function MapHomeScreen({ navigation }: any) {
       }
     })();
   }, []);
+
+  // Fetch free parking predictions when location changes (for free mode)
+  useEffect(() => {
+    if (viewMode === 'free' && selectedLocation) {
+      fetchFreeParkingPredictions();
+    }
+  }, [selectedLocation, viewMode]);
+  
+  const fetchFreeParkingPredictions = async () => {
+    if (!selectedLocation) return;
+    
+    setIsLoadingPredictions(true);
+    try {
+      console.log('[MapHome] Fetching free parking predictions for:', selectedLocation);
+      const predictions = await getFreeParkingPredictions(
+        selectedLocation.lat,
+        selectedLocation.lng,
+        1000 // 1km radius
+      );
+      console.log('[MapHome] Got predictions:', predictions);
+      setFreeHotspots(predictions);
+    } catch (error) {
+      console.error('[MapHome] Error fetching predictions:', error);
+      Alert.alert(
+        'Prediction Error',
+        'Failed to load free parking predictions. Please try again.',
+        [{ text: 'OK' }]
+      );
+      // Fallback to empty array
+      setFreeHotspots([]);
+    } finally {
+      setIsLoadingPredictions(false);
+    }
+  };
 
   // Fetch parkings when location changes (for paid mode)
   useEffect(() => {
@@ -552,6 +586,26 @@ export default function MapHomeScreen({ navigation }: any) {
         </View>
       )}
 
+      {/* Free Parking Loading Indicator */}
+      {viewMode === 'free' && isLoadingPredictions && !selectedParking && !selectedHotspot && (
+        <View style={styles.bottomSheet}>
+          <Text style={styles.bottomSheetTitle}>Loading Free Parking Predictions...</Text>
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#3b82f6" />
+          </View>
+        </View>
+      )}
+
+      {/* Free Parking Empty State */}
+      {viewMode === 'free' && !isLoadingPredictions && freeHotspots.length === 0 && !selectedParking && !selectedHotspot && (
+        <View style={styles.bottomSheet}>
+          <Text style={styles.bottomSheetTitle}>No Free Parking Found</Text>
+          <Text style={styles.emptyStateText}>
+            No free parking predictions available in this area. Try searching a different location.
+          </Text>
+        </View>
+      )}
+
       {/* Seller Mode Button */}
       {viewMode === 'seller' && (
         <TouchableOpacity
@@ -941,5 +995,16 @@ const styles = StyleSheet.create({
   },
   fabText: {
     fontSize: 24,
+  },
+  loadingContainer: {
+    padding: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyStateText: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    padding: 15,
   },
 });
