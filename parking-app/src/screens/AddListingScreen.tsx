@@ -18,7 +18,6 @@ const PUNE_CENTER = [73.8567, 18.5204]; // [lng, lat] for Mapbox
 export default function AddListingScreen({ navigation }: any) {
   const { createSellerParking, user } = useAppStore();
   const [name, setName] = useState('');
-  const [price, setPrice] = useState('');
   const [slots, setSlots] = useState('');
   const [location, setLocation] = useState<{ lat: number; lng: number }>({
     lat: PUNE_CENTER[1],
@@ -47,10 +46,6 @@ export default function AddListingScreen({ navigation }: any) {
       Alert.alert('Error', 'Please enter parking name');
       return;
     }
-    if (!price || parseInt(price) <= 0) {
-      Alert.alert('Error', 'Please enter valid price');
-      return;
-    }
     if (!slots || parseInt(slots) <= 0) {
       Alert.alert('Error', 'Please enter valid number of slots');
       return;
@@ -62,7 +57,6 @@ export default function AddListingScreen({ navigation }: any) {
       const parkingData = {
         name: name.trim(),
         location: [location.lng, location.lat] as [number, number],
-        price_per_hour: parseInt(price),
         slots: parseInt(slots),
         available: parseInt(slots),
         amenities: selectedAmenities,
@@ -94,18 +88,6 @@ export default function AddListingScreen({ navigation }: any) {
             placeholder="e.g., Downtown Parking"
             value={name}
             onChangeText={setName}
-          />
-        </View>
-
-        {/* Price Input */}
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Price per Hour (₹) *</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="e.g., 30"
-            value={price}
-            onChangeText={setPrice}
-            keyboardType="number-pad"
           />
         </View>
 

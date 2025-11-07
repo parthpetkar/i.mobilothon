@@ -77,7 +77,6 @@ export interface GetParkingsParams {
 export interface CreateParkingData {
   name: string;
   location: [number, number]; // [longitude, latitude]
-  price_per_hour: number;
   slots: number;
   available: number;
   amenities?: string[];
