@@ -35,9 +35,15 @@ async def predict_entire_table():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/health")
+@app.api_route("/health", methods=["GET", "HEAD"])
 async def health():
-    return {"status":"healthy"}
+    return {
+        "status": "healthy",
+        "timestamp": datetime.now().isoformat(),
+        "service": "ml-service",
+        "version": "1.0.0",
+        "database": "connected" if supabase else "disconnected"
+    }
 
 async def process_new_listing(parking_id: str, feature_data: dict):
     """Process a single new listing and call backend with price."""
