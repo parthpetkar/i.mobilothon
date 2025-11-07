@@ -97,7 +97,7 @@ class GridsReq(BaseModel):
 class TransformRequest(BaseModel):
     """Request for transformation endpoint"""
     grids: Optional[List[Grid]] = None  # Optional, defaults to Pune grids
-    categories: Optional[List[str]] = ["restaurant", "cafe", "hospital", "clinic", "pharmacy", "supermarket"]
+    categories: Optional[List[str]] = None  # None = parking mode, List = commercial mode
     radius_meters: Optional[int] = 1000
     max_results: Optional[int] = 500
     save_to_supabase: Optional[bool] = True
@@ -114,10 +114,9 @@ class TransformResponse(BaseModel):
 
 @app.get("/collectors/places")
 async def collect_places(): 
-    """Collect places data for Pune city"""
+    """Collect parking places data for Pune city (default mode - no categories)"""
     return await run_places_collector({
         "grids": PUNE_GRIDS,
-        "categories": ["restaurant", "cafe", "hospital", "clinic", "pharmacy", "supermarket", "parking"],
         "radius_meters": 1000,
         "max_results": 500
     })
@@ -202,7 +201,7 @@ async def collect_and_transform(req: Optional[TransformRequest] = Body(default=N
         # Collect places
         places_data = await run_places_collector({
             "grids": [g.model_dump() for g in grids],
-            "categories": req.categories,
+            "categories": req.categories,  # None = parking mode, List = commercial mode
             "radius_meters": req.radius_meters,
             "max_results": req.max_results
         })
@@ -315,20 +314,42 @@ async def collect_and_transform(req: Optional[TransformRequest] = Body(default=N
 async def root():
     """Service info"""
     return {
-        "service": "Collector & Transformer Service",
-        "version": "2.2.0",
+        "service": "Dual-Mode Data Collector & Transformer Service",
+        "version": "2.3.0",
         "location": "Pune, India",
-        "description": "Collects and transforms parking data for Pune city",
+        "description": "Intelligent data collection: Parking mode (default) or Commercial places mode (with categories)",
+        "modes": {
+            "parking_mode": {
+                "trigger": "No categories parameter or empty categories",
+                "description": "Collects parking-specific data from OSM",
+                "data_source": "OpenStreetMap parking amenities"
+            },
+            "commercial_mode": {
+                "trigger": "Categories parameter provided",
+                "description": "Collects commercial places (restaurants, cafes, etc.)",
+                "data_source": "OpenStreetMap commercial amenities"
+            }
+        },
         "endpoints": {
             "collectors": {
-                "GET /collectors/places": "Collect places data for Pune",
+                "GET /collectors/places": "Collect parking places data for Pune (default: parking mode)",
                 "GET /collectors/traffic": "Collect traffic data for Pune",
                 "GET /collectors/weather": "Collect weather data for Pune",
                 "GET /collectors/events": "Collect events data for Pune",
                 "GET /collectors/grids": "Get grid data for Pune"
             },
             "transformer": {
-                "POST /transform/collect-and-transform": "Collect all data and transform (defaults to Pune, max 100 records saved)"
+                "POST /transform/collect-and-transform": "Collect all data and transform. Use 'categories' param to switch modes"
+            }
+        },
+        "examples": {
+            "parking_mode": {
+                "request": {"grids": None, "categories": None},
+                "description": "Collects parking data (default)"
+            },
+            "commercial_mode": {
+                "request": {"grids": None, "categories": ["restaurant", "cafe", "hospital"]},
+                "description": "Collects commercial places data"
             }
         },
         "pune_grids": [

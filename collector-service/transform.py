@@ -29,9 +29,10 @@ def transform_parking_data(
 ) -> pd.DataFrame:
     """
     Transform collected data into parking features.
+    Supports both parking mode and commercial places mode.
     
     Args:
-        places_data: POI data from places collector (format: {'items': [...]})
+        places_data: Places data from places collector (format: {'items': [...]})
         traffic_data: Traffic data from traffic collector
         weather_data: Weather data from weather collector
         events_data: Events data from events collector
@@ -44,29 +45,77 @@ def transform_parking_data(
     # Step 1: Create records from collected data
     all_records = []
     
-    # Flatten places data into records
-    # Use OSM IDs from places API as SystemCodeNumber (representing actual parking spots in Pune)
+    # Create traffic condition lookup for grid-based traffic data
+    traffic_lookup = {}
+    for item in traffic_data.get('items', []):
+        grid_id = item.get('grid_id')
+        traffic_info = item.get('data', {})
+        # Extract duration from routing response if available
+        duration = None
+        try:
+            features = traffic_info.get('features', [])
+            if features:
+                properties = features[0].get('properties', {})
+                time_info = properties.get('time')
+                if time_info:
+                    duration = time_info / 60  # Convert seconds to minutes
+        except (KeyError, TypeError, IndexError):
+            pass
+        
+        # Categorize traffic condition based on duration
+        if duration is None:
+            condition = "Normal"
+        elif duration < 5:
+            condition = "Light"
+        elif duration < 15:
+            condition = "Normal"
+        elif duration < 30:
+            condition = "Heavy"
+        else:
+            condition = "Congested"
+            
+        traffic_lookup[grid_id] = condition
     
+    # Flatten places data into records
     for item in places_data.get('items', []):
         centroid = item.get('centroid', [0, 0])
+        grid_id = item.get('grid_id')
+        mode = item.get('mode', 'unknown')  # 'parking' or 'commercial'
         
         for place in item.get('places', []):
-            # Use the OSM ID as the system code number for the parking spot
-            osm_id = place.get('id')
-            if osm_id is None:
+            place_id = place.get('id')
+            if place_id is None:
                 continue  # Skip places without IDs
                 
+            # Generate SystemCodeNumber based on mode and source
+            if mode == 'parking':
+                # Parking mode - use OSM_<id> format
+                system_code = place_id  # Already formatted as OSM_<id> from collector
+                vehicle_type = 'car'
+                capacity = 0  # Default to 0 for parking mode
+                queue_length = 0
+                is_special_day = 0
+            else:
+                # Commercial places mode - simulate parking characteristics
+                system_code = f"COMM_{place_id}"  # Commercial place as parking proxy
+                vehicle_type = 'car'
+                capacity = np.random.randint(20, 200)  # Simulated capacity for commercial areas
+                queue_length = np.random.randint(0, 10)
+                is_special_day = 0
+            
+            # Get traffic condition for this grid
+            traffic_condition = traffic_lookup.get(grid_id, "Normal")
+            
             record = {
-                'SystemCodeNumber': osm_id,  # OSM ID representing the parking spot in Pune
-                'Capacity': np.random.randint(20, 200),  # Simulated capacity
+                'SystemCodeNumber': system_code,
+                'Capacity': capacity,
                 'Latitude': place.get('lat', centroid[1]),
                 'Longitude': place.get('lon', centroid[0]),
-                'Occupancy': np.random.randint(0, 100),  # Simulated occupancy
-                'VehicleType': 'Car',
-                'TrafficConditionNearby': 'Normal',
-                'QueueLength': np.random.randint(0, 10),
-                'IsSpecialDay': False,
-                'Timestamp': datetime.now().isoformat()
+                'VehicleType': vehicle_type,
+                'TrafficConditionNearby': traffic_condition,
+                'QueueLength': queue_length,
+                'IsSpecialDay': is_special_day,
+                'Timestamp': datetime.utcnow().isoformat() + 'Z'  # Current UTC timestamp
             }
             all_records.append(record)
     
@@ -75,15 +124,15 @@ def transform_parking_data(
         return pd.DataFrame()
     
     df = pd.DataFrame(all_records)
-    logger.info(f"Created {len(df)} parking feature records")
+    logger.info(f"Created {len(df)} feature records")
     
-    # Step 2: Apply time transformations
+    # Step 2: Apply existing time transformations
     df = _add_time_features(df)
     
-    # Step 3: Add duration features
+    # Step 3: Add existing duration features
     df = _add_duration_features(df)
     
-    # Step 4: Format final output
+    # Step 4: Format final output using existing logic
     df = _format_final_columns(df)
     
     logger.info(f"Transformation complete. Generated {len(df)} records")

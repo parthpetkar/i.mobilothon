@@ -24,7 +24,13 @@ def _validate_centroid(centroid: Optional[List[float]]):
         raise ValueError("centroid must be [lon, lat]")
     return float(centroid[0]), float(centroid[1])
 
+# -------------------------
+# Places (Parking-focused data collection)
+# -------------------------
+OVERPASS_URL = "https://overpass-api.de/api/interpreter"
+
 def _normalize_categories(categories: Optional[List[str]]) -> List[str]:
+    """Normalize category names for commercial places"""
     if not categories:
         return []
     mapping = {
@@ -44,12 +50,27 @@ def _normalize_categories(categories: Optional[List[str]]) -> List[str]:
             clean.append(s)
     return clean
 
-# -------------------------
-# Places (Overpass API)
-# -------------------------
-OVERPASS_URL = "https://overpass-api.de/api/interpreter"
+def _build_parking_overpass_query(lat: float, lon: float, radius: int, max_results: int) -> str:
+    """Build Overpass query specifically for parking-related features"""
+    # Query for all parking amenities with specific parking types
+    
+    q = f"""[out:json][timeout:25];
+(
+  // Nodes with amenity=parking
+  node["amenity"="parking"](around:{radius},{lat},{lon});
+  
+  // Ways with amenity=parking  
+  way["amenity"="parking"](around:{radius},{lat},{lon});
+  
+  // Relations with amenity=parking
+  relation["amenity"="parking"](around:{radius},{lat},{lon});
+);
+out center {max_results};"""
+    
+    return q
 
-def _build_overpass_query(lat: float, lon: float, radius: int, max_results: int, cats: List[str]) -> str:
+def _build_commercial_overpass_query(lat: float, lon: float, radius: int, max_results: int, cats: List[str]) -> str:
+    """Build Overpass query for commercial places (restaurants, cafes, etc.)"""
     mapping = {
         "restaurant": ("amenity", "restaurant"),
         "cafe": ("amenity", "cafe"),
@@ -67,42 +88,111 @@ def _build_overpass_query(lat: float, lon: float, radius: int, max_results: int,
     return q
 
 async def run_places_collector(payload: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Collect places data:
+    - Default (no categories): Parking-focused data from OSM
+    - With categories: Commercial places (restaurants, cafes, etc.) from OSM
+    """
     grids = payload.get("grids", []) or []
     radius = int(payload.get("radius_meters", 1000))
     max_results = int(payload.get("max_results", 500))
-    cats = _normalize_categories(payload.get("categories", ["restaurant", "cafe", "clinic", "hospital", "pharmacy", "supermarket"]))
-
+    categories = payload.get("categories")  # Check if categories are provided
+    
+    # Determine mode based on whether categories are provided
+    is_parking_mode = categories is None or len(categories) == 0
+    
+    if not is_parking_mode:
+        # Commercial places mode - normalize categories
+        categories = _normalize_categories(categories)
+    
     results = []
     async with httpx.AsyncClient(timeout=60) as client:
         for g in grids:
             gid = g.get("id")
             try:
                 lon, lat = _validate_centroid(g["centroid"])
-                q = _build_overpass_query(lat, lon, radius, max_results, cats)
-                r = await client.post(OVERPASS_URL, data={"data": q})
-                data = r.json()
-                places = []
-                for el in data.get("elements", []):
-                    if el.get("type") == "node":
-                        el_lon, el_lat = el.get("lon"), el.get("lat")
-                    else:
-                        center = el.get("center", {})
-                        el_lon, el_lat = center.get("lon"), center.get("lat")
-                    tags = el.get("tags", {})
-                    places.append({
-                        "id": el.get("id"),  # OSM ID for the parking spot
-                        "name": tags.get("name", "Unnamed"),
-                        "lat": el_lat,
-                        "lon": el_lon,
-                        "tags": tags
+                
+                if is_parking_mode:
+                    # Parking mode - fetch OSM parking data
+                    osm_places = []
+                    q = _build_parking_overpass_query(lat, lon, radius, max_results)
+                    r = await client.post(OVERPASS_URL, data={"data": q})
+                    data = r.json()
+                    
+                    for el in data.get("elements", []):
+                        if el.get("type") == "node":
+                            el_lon, el_lat = el.get("lon"), el.get("lat")
+                        else:
+                            center = el.get("center", {})
+                            el_lon, el_lat = center.get("lon"), center.get("lat")
+                        
+                        if el_lon is None or el_lat is None:
+                            continue
+                            
+                        tags = el.get("tags", {})
+                        parking_type = tags.get("parking", "unknown")
+                        
+                        osm_places.append({
+                            "id": f"OSM_{el.get('id')}",  # Prefix OSM ID as specified
+                            "name": tags.get("name", "Unnamed Parking"),
+                            "lat": el_lat,
+                            "lon": el_lon,
+                            "parking_type": parking_type,
+                            "source": "osm",
+                            "tags": tags
+                        })
+                    
+                    results.append({
+                        "grid_id": gid, 
+                        "centroid": [lon, lat],
+                        "provider": "parking_osm", 
+                        "places_count": len(osm_places),
+                        "mode": "parking",
+                        "places": osm_places
                     })
-                results.append({
-                    "grid_id": gid, "centroid": [lon, lat],
-                    "provider": "overpass", "places_count": len(places),
-                    "places": places
-                })
+                    
+                else:
+                    # Commercial places mode - fetch commercial data
+                    commercial_places = []
+                    q = _build_commercial_overpass_query(lat, lon, radius, max_results, categories)
+                    r = await client.post(OVERPASS_URL, data={"data": q})
+                    data = r.json()
+                    
+                    for el in data.get("elements", []):
+                        if el.get("type") == "node":
+                            el_lon, el_lat = el.get("lon"), el.get("lat")
+                        else:
+                            center = el.get("center", {})
+                            el_lon, el_lat = center.get("lon"), center.get("lat")
+                        
+                        if el_lon is None or el_lat is None:
+                            continue
+                            
+                        tags = el.get("tags", {})
+                        
+                        commercial_places.append({
+                            "id": el.get("id"),  # OSM ID
+                            "name": tags.get("name", "Unnamed"),
+                            "lat": el_lat,
+                            "lon": el_lon,
+                            "source": "osm",
+                            "tags": tags
+                        })
+                    
+                    results.append({
+                        "grid_id": gid, 
+                        "centroid": [lon, lat],
+                        "provider": "commercial_osm", 
+                        "places_count": len(commercial_places),
+                        "mode": "commercial",
+                        "categories": categories,
+                        "places": commercial_places
+                    })
+                
             except Exception as e:
+                logger.error(f"Error collecting places for grid {gid}: {str(e)}")
                 results.append({"grid_id": gid, "error": str(e)})
+                
     return {"collector": "places", "items": results}
 
 # -------------------------
@@ -162,7 +252,7 @@ async def run_events_collector(payload: Dict[str, Any]) -> Dict[str, Any]:
     phq = cfg.get("PREDICTHQ_TOKEN")
     cal = cfg.get("CALENDARIFIC_API_KEY")
     geo = cfg.get("GEOAPIFY_API_KEY")
-    loc, bbox, city = payload.get("location"), payload.get("bbox"), payload.get("city")
+    loc, city = payload.get("location"), payload.get("city")
     lon, lat = (loc or [None, None])[0], (loc or [None, None])[1]
 
     if not city and lon and lat and geo:
