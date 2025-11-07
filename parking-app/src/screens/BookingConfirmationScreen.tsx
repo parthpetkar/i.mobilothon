@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, ActivityIndicator } from 'react-native';
-import QRCode from 'react-native-qrcode-svg';
 import { useAppStore } from '../store/appStore';
 import { Booking } from '../types';
-import { generateQRCode, formatCurrency } from '../utils/helpers';
+import { generateOTP, formatCurrency, formatOTP } from '../utils/helpers';
 
 export default function BookingConfirmationScreen({ route, navigation }: any) {
   const { parking, duration, totalPrice } = route.params;
@@ -31,7 +30,16 @@ export default function BookingConfirmationScreen({ route, navigation }: any) {
       // Create booking via API
       const newBooking = await createBooking(parseInt(parking.id), startTime, endTime);
       
-      setBooking(newBooking);
+      // Generate OTP for booking verification
+      const otp = generateOTP();
+      
+      // Update booking with generated OTP
+      const bookingWithOTP = {
+        ...newBooking,
+        otp: otp
+      };
+      
+      setBooking(bookingWithOTP);
       setIsProcessing(false);
       setShowPaymentModal(false);
       setBookingComplete(true);
@@ -73,13 +81,14 @@ export default function BookingConfirmationScreen({ route, navigation }: any) {
             </View>
           </View>
 
-          {/* QR Code */}
-          <View style={styles.qrContainer}>
-            <Text style={styles.qrTitle}>Show this QR at entrance</Text>
-            <View style={styles.qrCodeWrapper}>
-              <QRCode value={booking.qrCode} size={200} />
+          {/* OTP Display */}
+          <View style={styles.otpContainer}>
+            <Text style={styles.otpTitle}>Your Booking OTP</Text>
+            <View style={styles.otpBox}>
+              <Text style={styles.otpCode}>{formatOTP(booking.otp)}</Text>
             </View>
-            <Text style={styles.qrCode}>{booking.qrCode}</Text>
+            <Text style={styles.otpHint}>Show this code to the parking attendant</Text>
+            <Text style={styles.otpSubtext}>Booking ID: {booking.id}</Text>
           </View>
 
           {/* Action Buttons */}
@@ -332,29 +341,44 @@ const styles = StyleSheet.create({
     color: '#3b82f6',
     fontSize: 16,
   },
-  qrContainer: {
+  otpContainer: {
     alignItems: 'center',
     marginBottom: 30,
+    width: '100%',
   },
-  qrTitle: {
-    fontSize: 16,
+  otpTitle: {
+    fontSize: 18,
     fontWeight: '600',
     marginBottom: 20,
+    color: '#333',
   },
-  qrCodeWrapper: {
-    backgroundColor: 'white',
-    padding: 20,
+  otpBox: {
+    backgroundColor: '#3b82f6',
+    paddingHorizontal: 40,
+    paddingVertical: 25,
     borderRadius: 15,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
-    elevation: 3,
     marginBottom: 15,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 5,
   },
-  qrCode: {
-    fontSize: 12,
+  otpCode: {
+    fontSize: 42,
+    fontWeight: 'bold',
+    color: '#fff',
+    letterSpacing: 8,
+    fontFamily: 'monospace',
+  },
+  otpHint: {
+    fontSize: 14,
     color: '#666',
+    marginBottom: 5,
+  },
+  otpSubtext: {
+    fontSize: 12,
+    color: '#999',
     fontFamily: 'monospace',
   },
   rateButton: {

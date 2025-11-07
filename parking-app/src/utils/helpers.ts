@@ -37,8 +37,21 @@ export const getProbabilityLabel = (probability: number): string => {
   return 'Low';
 };
 
-export const generateQRCode = (bookingId: string): string => {
-  return `PARKING-${bookingId}-${Date.now()}`;
+export const generateOTP = (): string => {
+  // Generate a 6-digit OTP
+  return Math.floor(100000 + Math.random() * 900000).toString();
+};
+
+export const validateOTP = (inputOTP: string, actualOTP: string): boolean => {
+  return inputOTP === actualOTP;
+};
+
+export const formatOTP = (otp: string): string => {
+  // Format OTP as XXX-XXX for better readability
+  if (otp.length === 6) {
+    return `${otp.slice(0, 3)}-${otp.slice(3)}`;
+  }
+  return otp;
 };
 
 export const formatCurrency = (amount: number): string => {

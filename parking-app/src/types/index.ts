@@ -37,9 +37,11 @@ export interface Booking {
   duration: number;
   totalPrice: number;
   timestamp: string;
-  qrCode: string;
-  status: 'active' | 'completed';
+  otp: string;
+  status: 'active' | 'completed' | 'approved';
   userId: string;
+  startTime: string;
+  endTime: string;
 }
 
 export interface SellerParking extends PaidParking {

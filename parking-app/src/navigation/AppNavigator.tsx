@@ -11,6 +11,7 @@ import AddListingScreen from '../screens/AddListingScreen';
 import LoginScreen from '../screens/LoginScreen';
 import SignupScreen from '../screens/SignupScreen';
 import ProfileScreen from '../screens/ProfileScreen';
+import OTPVerificationScreen from '../screens/OTPVerificationScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -80,6 +81,11 @@ export default function AppNavigator() {
           name="AddListing"
           component={AddListingScreen}
           options={{ title: 'Add New Parking' }}
+        />
+        <Stack.Screen
+          name="OTPVerification"
+          component={OTPVerificationScreen}
+          options={{ title: 'Verify Booking OTP' }}
         />
       </Stack.Navigator>
     </NavigationContainer>
