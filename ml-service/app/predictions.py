@@ -93,6 +93,9 @@ def predict_free_parking_availability(
     
     df = pd.DataFrame(response.data)
     
+    # Store original SystemCodeNumber before preprocessing
+    df['OriginalSystemCode'] = df['SystemCodeNumber'].copy()
+    
     # Filter by distance if coordinates are provided
     if user_lat and user_lon:
         df['distance'] = df.apply(
@@ -136,15 +139,8 @@ def predict_free_parking_availability(
     # Build response
     results = []
     for _, row in processed_data.iterrows():
-        # Get original SystemCodeNumber from df
-        original_idx = df.index[df.index == row.name].tolist()
-        if not original_idx:
-            continue
-        
-        original_row = df.loc[original_idx[0]]
-        
         results.append({
-            "systemCode": str(original_row.get('SystemCodeNumber', '')),
+            "systemCode": str(row['OriginalSystemCode']),
             "lat": float(row['Latitude']),
             "lon": float(row['Longitude']),
             "availabilityProbability": float(row['availability_probability']),
