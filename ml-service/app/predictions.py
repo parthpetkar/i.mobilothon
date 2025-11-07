@@ -88,7 +88,6 @@ def predict_free_parking_availability(
     
     # Fetch all parking features from Supabase
     response = supabase.schema("parking").table("parking_features").select("*").execute()
-    
     if not response.data:
         return []
     

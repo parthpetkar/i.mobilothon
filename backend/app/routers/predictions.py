@@ -1,15 +1,7 @@
-import sys
-import os
 from fastapi import APIRouter, HTTPException, Query
 from typing import Dict, Any
-
-# Add ml-service to Python path
-ml_service_path = os.path.join(os.path.dirname(__file__), "..", "..", "..", "ml-service")
-if ml_service_path not in sys.path:
-    sys.path.insert(0, ml_service_path)
-
-# Import from ML service
-from app.predictions import predict_free_parking_availability
+import httpx
+from app.config import ML_SERVICE_URL
 
 router = APIRouter(prefix="/predictions", tags=["predictions"])
 
@@ -41,15 +33,32 @@ async def get_free_parking_predictions(
     - query: Echo of query parameters
     """
     try:
-        # Call ML service function directly
-        parking_spots = predict_free_parking_availability(lat, lon, radius_meters)
+        # Call ML service
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            ml_url = f"{ML_SERVICE_URL.rstrip('/')}/predict/free-parking"
+            response = await client.get(
+                ml_url,
+                params={"lat": lat, "lon": lon, "radius_meters": radius_meters}
+            )
         
+        if response.status_code != 200:
+            raise HTTPException(
+                status_code=response.status_code,
+                detail=f"ML service error: {response.text}"
+            )
+        
+        predictions = response.json()
         return {
-            "parking_spots": parking_spots,
-            "count": len(parking_spots),
+            "parking_spots": predictions.get("parking_spots", []),
+            "count": predictions.get("count", 0),
             "query": {"lat": lat, "lon": lon, "radius_meters": radius_meters}
         }
         
+    except httpx.HTTPError as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to connect to ML service: {str(e)}"
+        )
     except Exception as e:
         raise HTTPException(
             status_code=500,
