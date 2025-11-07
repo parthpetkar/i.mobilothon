@@ -433,6 +433,28 @@ async def collect_and_transform(req: Optional[TransformRequest] = Body(default=N
             detail=f"Pipeline failed: {str(e)}"
         )
 
+@app.api_route("/health", methods=["GET", "HEAD"])
+async def health():
+    """Health check endpoint"""
+    try:
+        # Check Supabase connection
+        supabase_status = "connected" if SUPABASE_URL and SUPABASE_KEY else "disconnected"
+        
+        return {
+            "status": "healthy",
+            "timestamp": datetime.now().isoformat(),
+            "service": "collector-service",
+            "version": "2.3.0",
+            "database": supabase_status
+        }
+    except Exception as e:
+        return {
+            "status": "unhealthy",
+            "timestamp": datetime.now().isoformat(),
+            "service": "collector-service",
+            "error": str(e)
+        }
+
 @app.get("/")
 async def root():
     """Service info"""
