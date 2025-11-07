@@ -314,6 +314,7 @@ source = { virtual = "." }
 dependencies = [
     { name = "fastapi" },
     { name = "holidays" },
+    { name = "httpx" },
     { name = "joblib" },
     { name = "numpy" },
     { name = "pandas" },
@@ -328,6 +329,7 @@ dependencies = [
 requires-dist = [
     { name = "fastapi", specifier = ">=0.121.0" },
     { name = "holidays", specifier = ">=0.84" },
+    { name = "httpx", specifier = ">=0.28.1" },
     { name = "joblib", specifier = ">=1.5.2" },
     { name = "numpy", specifier = ">=2.3.4" },
     { name = "pandas", specifier = ">=2.3.3" },

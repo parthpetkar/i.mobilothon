@@ -7,6 +7,7 @@ requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.121.0",
     "holidays>=0.84",
+    "httpx>=0.28.1",
     "joblib>=1.5.2",
     "numpy>=2.3.4",
     "pandas>=2.3.3",
