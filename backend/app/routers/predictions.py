@@ -35,7 +35,7 @@ async def get_free_parking_predictions(
     try:
         # Call ML service
         async with httpx.AsyncClient(timeout=30.0) as client:
-            ml_url = f"{ML_SERVICE_URL.rstrip('/')}/predict/free-parking"
+            ml_url = f"{ML_SERVICE_URL.rstrip('/')}/free-parking/predictions"
             response = await client.get(
                 ml_url,
                 params={"lat": lat, "lon": lon, "radius_meters": radius_meters}
