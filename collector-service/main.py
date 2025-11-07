@@ -14,6 +14,7 @@ from transform import (
     prepare_for_supabase,
     save_to_supabase
 )
+from supabase import create_client
 import logging
 from datetime import datetime
 import os
@@ -149,6 +150,128 @@ async def collect_grids():
     return await run_grids_collector({
         "grids": PUNE_GRIDS
     })
+
+
+@app.post("/ingest/parking")
+async def ingest_parking(record: dict):
+    """Ingest a single parking/listing into Supabase parking_features for ML consumption.
+
+    Expected payload keys: parking_id, name, location ( [lng, lat] ), slots, amenities, operator_id
+    """
+    if not SUPABASE_URL or not SUPABASE_KEY:
+        raise HTTPException(status_code=500, detail="Supabase credentials not configured")
+
+    # Basic validation
+    parking_id = record.get("parking_id")
+    location = record.get("location", []) or []
+    if not parking_id or len(location) < 2:
+        raise HTTPException(status_code=400, detail="parking_id and location [lng, lat] required")
+
+    # Prepare data collection
+    from datetime import datetime
+    now = datetime.utcnow()
+    try:
+        lng = float(location[0])
+        lat = float(location[1])
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid location coordinates")
+
+    # Create a grid for the parking location
+    parking_grid = {
+        "id": f"parking_{parking_id}",
+        "centroid": [lng, lat],
+        "bbox": [lng - 0.01, lat - 0.01, lng + 0.01, lat + 0.01],  # ~1km radius
+        "metadata": {"area": record.get("name", "Unknown Area")}
+    }
+
+    # Collect contextual data
+    logger.info(f"Collecting contextual data for parking {parking_id}")
+    
+    # Get traffic conditions
+    traffic_data = await run_traffic_collector({"grids": [parking_grid]})
+    traffic_condition = "Normal"
+    if traffic_data and traffic_data.get('items'):
+        traffic_item = traffic_data['items'][0]
+        try:
+            # Extract duration from routing response
+            duration = traffic_item.get('data', {}).get('features', [])[0].get('properties', {}).get('time')
+            if duration:
+                duration_minutes = duration / 60
+                if duration_minutes < 5:
+                    traffic_condition = "Light"
+                elif duration_minutes < 15:
+                    traffic_condition = "Normal"
+                elif duration_minutes < 30:
+                    traffic_condition = "Heavy"
+                else:
+                    traffic_condition = "Congested"
+        except (IndexError, KeyError, TypeError):
+            pass
+
+    # Get weather data
+    weather_data = await run_weather_collector({"grids": [parking_grid]})
+    is_special_day = 0
+    if weather_data and weather_data.get('items'):
+        weather_item = weather_data['items'][0]
+        # Consider special weather conditions
+        try:
+            conditions = weather_item.get('data', {}).get('weather', [{}])[0].get('main', '').lower()
+            if any(cond in conditions for cond in ['rain', 'snow', 'storm']):
+                is_special_day = 1
+        except (IndexError, KeyError, TypeError):
+            pass
+
+    # Get events data
+    events_data = await run_events_collector({
+        "location": [lng, lat],
+        "city": "Pune"
+    })
+    # If there are events nearby, consider it a special day
+    if events_data and events_data.get('items', []):
+        is_special_day = 1
+
+    # Categorize time based on hour
+    def categorize_time(hour: int) -> str:
+        if 5 <= hour < 12:
+            return 'Morning'
+        elif 12 <= hour < 17:
+            return 'Afternoon'
+        elif 17 <= hour < 21:
+            return 'Evening'
+        else:
+            return 'Night'
+
+    logger.info(f"Creating feature record with traffic={traffic_condition}, special_day={is_special_day}")
+    feature = {
+        "SystemCodeNumber": f"LISTING_{parking_id}",
+        "Capacity": int(record.get("slots", 0)),
+        "Latitude": lat,
+        "Longitude": lng,
+        "Occupancy": 0,
+        "VehicleType": "car",
+        "TrafficConditionNearby": traffic_condition,
+        "QueueLength": 0,
+        "IsSpecialDay": is_special_day,
+        "Timestamp": now.strftime('%Y-%m-%d %H:%M:%S'),
+        "Timestamp_WIB": now.strftime('%Y-%m-%d %H:%M:%S'),
+        "Hour": now.hour,
+        "DayOfWeek": now.weekday(),
+        "DayName": now.strftime('%A'),
+        "IsWeekend": 1 if now.weekday() in [5,6] else 0,
+        "IsHoliday": 0,  # Could enhance with actual holiday data
+        "TimeCategory": categorize_time(now.hour),
+        "Duration_Minutes": 60,
+        "EstimatedDuration_Minutes": 60
+    }
+
+    try:
+        supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+        resp = supabase.schema("parking").table("parking_features").insert([feature]).execute()
+        if getattr(resp, 'error', None):
+            raise Exception(str(resp.error))
+        return {"status": "ok", "inserted": len(resp.data or [])}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to insert feature: {str(e)}")
 
 @app.post("/transform/collect-and-transform", response_model=TransformResponse)
 async def collect_and_transform(req: Optional[TransformRequest] = Body(default=None)):

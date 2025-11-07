@@ -21,7 +21,9 @@ async def create_parking(create_data: ParkingCreate, operator_id: str) -> Dict[s
             "type": "Point",
             "coordinates": [create_data.location[0], create_data.location[1]]
         },
-        "price_per_hour": float(create_data.price_per_hour),
+        # Price may be None initially; store NULL in DB if not provided
+        # Set default price of 0 until ML service updates it
+        "price_per_hour": float(create_data.price_per_hour if create_data.price_per_hour is not None else 0),
         "slots": create_data.slots,
         "available": create_data.slots,
         "amenities": create_data.amenities or [],
@@ -32,6 +34,19 @@ async def create_parking(create_data: ParkingCreate, operator_id: str) -> Dict[s
         print(f"Event: listing.created - ID: {response.data[0]['id']}")
         return response.data[0]
     raise ValueError("Failed to create parking")
+
+
+async def set_price_for_parking(parking_id: int, price: float) -> Dict[str, Any]:
+    """Update price_per_hour for a parking without checking operator ownership.
+
+    This is intended to be called by the ML callback service which has its own
+    auth/validation handled at the router level.
+    """
+    response = client.table("parkings").update({"price_per_hour": price}).eq("id", parking_id).execute()
+    if response.data:
+        print(f"Event: listing.price_updated - ID: {parking_id}")
+        return response.data[0]
+    raise ValueError("Failed to set price for parking")
 
 
 async def get_parkings_near(query: Dict[str, Any]) -> List[Dict[str, Any]]:
