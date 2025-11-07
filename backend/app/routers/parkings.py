@@ -1,6 +1,16 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Header, Body
 from app.models import ParkingCreate, ParkingUpdate, ParkingAvailabilityUpdate, ParkingResponse
-from app.database import create_parking, get_parkings_near, get_parking_by_id, update_parking, delete_parking, update_availability
+from app.database import (
+    create_parking,
+    get_parkings_near,
+    get_parking_by_id,
+    update_parking,
+    delete_parking,
+    update_availability,
+    set_price_for_parking,
+)
+from app.config import COLLECTOR_SERVICE_URL, ML_CALLBACK_SECRET
+import httpx
 from app.dependencies import get_current_seller
 from typing import List, Dict
 from decimal import Decimal
@@ -44,20 +54,77 @@ async def get_parkings(  # Now async
 # @router.post("/", response_model=dict)
 @router.post("/", response_model=Dict[str, ParkingResponse])
 async def create_parking_endpoint(parking: ParkingCreate, current_user: Dict = Depends(get_current_seller)):
+    # Create listing in main DB. Price may be None initially (ML will set it later).
     db_parking = await create_parking(parking, current_user["id"])
-    
+
     new_parking = {
         "id": db_parking["id"],
         "name": db_parking["name"],
         "location": db_parking.get("geom", {}).get("coordinates", []),
-        "price_per_hour": db_parking.get("price_per_hour", 0),
+        # Ensure response model gets a Decimal-like numeric value even if None
+        "price_per_hour": db_parking.get("price_per_hour") if db_parking.get("price_per_hour") is not None else 0,
         "slots": db_parking["slots"],
         "available": db_parking["available"],
         "amenities": db_parking.get("amenities", []),
         "rating": db_parking.get("rating", 0),
     }
 
+    # Forward a simplified record to the collector service so it can store features for ML
+    try:
+        collector_payload = {
+            "parking_id": db_parking["id"],
+            "name": db_parking["name"],
+            "location": db_parking.get("geom", {}).get("coordinates", []),
+            "slots": db_parking["slots"],
+            "amenities": db_parking.get("amenities", []),
+            "operator_id": current_user["id"]
+        }
+        async with httpx.AsyncClient(timeout=10) as client:
+            collector_url = f"{COLLECTOR_SERVICE_URL.rstrip('/')}/ingest/parking"
+            resp = await client.post(collector_url, json=collector_payload)
+            if resp.status_code >= 400:
+                # log but do not fail the whole request - ML pipeline is asynchronous
+                print(f"Collector ingestion failed: {resp.status_code} - {resp.text}")
+    except Exception as e:
+        print(f"Error forwarding to collector: {str(e)}")
+
     return {"parking": ParkingResponse(**new_parking)}
+
+
+@router.post("/{parking_id}/price-callback", response_model=Dict[str, ParkingResponse])
+async def ml_price_callback(parking_id: int, payload: Dict = Body(...), x_ml_secret: str = Header(None)):
+    """Endpoint for ML service to POST computed price for a parking listing.
+
+    Expects header 'X-ML-Secret' to match ML_CALLBACK_SECRET.
+    Body: { "price_per_hour": 123.45 }
+    """
+    # Validate secret
+    if ML_CALLBACK_SECRET is None or x_ml_secret != ML_CALLBACK_SECRET:
+        raise HTTPException(status_code=403, detail="Invalid ML callback secret")
+
+    if not payload or "price_per_hour" not in payload:
+        raise HTTPException(status_code=400, detail="Missing price_per_hour in payload")
+
+    try:
+        price_val = float(payload["price_per_hour"])
+    except Exception:
+        raise HTTPException(status_code=400, detail="price_per_hour must be a number")
+
+    # Update DB without operator check
+    db_parking = await set_price_for_parking(parking_id, price_val)
+
+    formatted_parking = {
+        "id": db_parking["id"],
+        "name": db_parking["name"],
+        "location": db_parking.get("geom", {}).get("coordinates", []),
+        "price_per_hour": db_parking.get("price_per_hour", 0),
+        "slots": db_parking.get("slots", 0),
+        "available": db_parking.get("available", 0),
+        "amenities": db_parking.get("amenities", []),
+        "rating": db_parking.get("rating", 0),
+    }
+
+    return {"parking": ParkingResponse(**formatted_parking)}
 
 @router.put("/{parking_id}", response_model=dict)
 async def update_parking_endpoint(parking_id: int, parking: ParkingUpdate, current_user: Dict = Depends(get_current_seller)):
