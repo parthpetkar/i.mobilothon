@@ -9,10 +9,10 @@ from app.database import (
     update_availability,
     set_price_for_parking,
 )
-from app.config import COLLECTOR_SERVICE_URL, ML_CALLBACK_SECRET
+from app.config import COLLECTOR_SERVICE_URL, ML_CALLBACK_SECRET, ML_SERVICE_URL
 import httpx
 from app.dependencies import get_current_seller
-from typing import List, Dict
+from typing import List, Dict, Optional
 from decimal import Decimal
 
 router = APIRouter(prefix="/parkings", tags=["parkings"])

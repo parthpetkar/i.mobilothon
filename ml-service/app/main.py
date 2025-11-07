@@ -1,6 +1,6 @@
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Query
 from .config import supabase, BACKEND_URL, ML_CALLBACK_SECRET
-from .predictions import predict_parking_dynamics
+from .predictions import predict_parking_dynamics, predict_free_parking_availability
 from .summary import generate_summary, generate_free_hotspots, generate_paid_parkings
 from .utils import save_json_to_file
 import pandas as pd
@@ -9,6 +9,7 @@ import httpx
 import asyncio
 import logging
 from datetime import datetime, timedelta
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -34,6 +35,35 @@ async def predict_entire_table():
         return {"status":"success", "free_hotspots_count":len(free_hotspots), "paid_parkings_count":len(paid_parkings)}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/free-parking/predictions")
+async def get_free_parking_predictions(
+    lat: float = Query(..., description="User latitude"),
+    lon: float = Query(..., description="User longitude"),
+    radius_meters: int = Query(300, description="Search radius in meters", ge=50, le=5000)
+):
+    """
+    Get free parking availability predictions near user location.
+    
+    Returns parking spots with availability probability based on ML model predictions.
+    """
+    try:
+        parking_spots = predict_free_parking_availability(lat, lon, radius_meters)
+        
+        return {
+            "parking_spots": parking_spots,
+            "count": len(parking_spots),
+            "query": {
+                "lat": lat,
+                "lon": lon,
+                "radius_meters": radius_meters
+            }
+        }
+    except Exception as e:
+        logger.error(f"Error predicting free parking: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Prediction failed: {str(e)}")
+
 
 @app.api_route("/health", methods=["GET", "HEAD"])
 async def health():
