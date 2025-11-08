@@ -78,12 +78,14 @@ export default function SignupScreen({ navigation }: any) {
           <Text style={styles.subtitle}>Join Smart Parking today</Text>
 
           <View style={styles.form}>
+
             <TextInput
               style={styles.input}
               placeholder="Full Name *"
               value={fullName}
               onChangeText={setFullName}
               editable={!loading}
+              placeholderTextColor="#000"
             />
 
             <TextInput
@@ -94,6 +96,7 @@ export default function SignupScreen({ navigation }: any) {
               autoCapitalize="none"
               keyboardType="email-address"
               editable={!loading}
+              placeholderTextColor="#000"
             />
 
             <TextInput
@@ -103,6 +106,7 @@ export default function SignupScreen({ navigation }: any) {
               onChangeText={setPhone}
               keyboardType="phone-pad"
               editable={!loading}
+              placeholderTextColor="#000"
             />
 
             <TextInput
@@ -112,6 +116,7 @@ export default function SignupScreen({ navigation }: any) {
               onChangeText={setPassword}
               secureTextEntry
               editable={!loading}
+              placeholderTextColor="#000"
             />
 
             <TextInput
@@ -121,6 +126,7 @@ export default function SignupScreen({ navigation }: any) {
               onChangeText={setConfirmPassword}
               secureTextEntry
               editable={!loading}
+              placeholderTextColor="#000"
             />
 
             <TouchableOpacity

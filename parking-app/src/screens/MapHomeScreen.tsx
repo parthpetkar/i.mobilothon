@@ -22,7 +22,7 @@ import { getFreeParkingPredictions } from '../services/api';
 const PUNE_CENTER = [73.8567, 18.5204]; // [lng, lat] for Mapbox
 
 export default function MapHomeScreen({ navigation }: any) {
-  const { viewMode, setViewMode, paidParkings, selectedLocation, setSelectedLocation, setCurrentRoute, currentRoute, user, fetchParkingsNear } =
+  const { viewMode, setViewMode, paidParkings, selectedLocation, setSelectedLocation, setCurrentRoute, currentRoute, user, userProfile, fetchParkingsNear } =
     useAppStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
@@ -423,6 +423,7 @@ export default function MapHomeScreen({ navigation }: any) {
         <TextInput
           style={styles.searchInput}
           placeholder="Search location..."
+          placeholderTextColor="#000"
           value={searchQuery}
           onChangeText={handleSearchInput}
         />
@@ -430,19 +431,6 @@ export default function MapHomeScreen({ navigation }: any) {
           <View style={styles.searchLoading}>
             <ActivityIndicator size="small" color="#3b82f6" />
           </View>
-        )}
-        {/* Clear Filter Button - shows when location is selected */}
-        {selectedLocation && (
-          <TouchableOpacity
-            style={styles.clearFilterButton}
-            onPress={() => {
-              setSelectedLocation(null);
-              setSearchQuery('');
-              console.log('[MapHome] Cleared location filter - showing all parkings');
-            }}
-          >
-            <Text style={styles.clearFilterText}>✕ Show All</Text>
-          </TouchableOpacity>
         )}
         {searchResults.length > 0 && (
           <View style={styles.suggestions}>
@@ -469,42 +457,55 @@ export default function MapHomeScreen({ navigation }: any) {
         </Text>
       </TouchableOpacity>
 
-      {/* Clear Route Button */}
-      {currentRoute && (
-        <TouchableOpacity
-          style={styles.clearRouteButton}
-          onPress={() => setCurrentRoute(null)}
-        >
-          <Text style={styles.clearRouteButtonText}>✕ Clear Route</Text>
-        </TouchableOpacity>
-      )}
+      {/* Bottom Action Buttons */}
+      <View style={styles.bottomActionsContainer}>
+        {selectedLocation && (
+          <TouchableOpacity
+            style={styles.clearFilterButton}
+            onPress={() => {
+              setSelectedLocation(null);
+              setSearchQuery('');
+              console.log('[MapHome] Cleared location filter - showing all parkings');
+            }}
+          >
+            <Text style={styles.clearFilterText}>✕ Show All</Text>
+          </TouchableOpacity>
+        )}
+        {currentRoute && (
+          <TouchableOpacity
+            style={styles.clearRouteButton}
+            onPress={() => setCurrentRoute(null)}
+          >
+            <Text style={styles.clearRouteButtonText}>✕ Clear Route</Text>
+          </TouchableOpacity>
+        )}
+      </View>
 
-      {/* View Toggle */}
-      <View style={styles.toggleContainer}>
+      {/* Modern View Toggle */}
+      <View style={styles.toggleContainerModern}>
         <TouchableOpacity
-          style={[styles.toggleButton, viewMode === 'free' && styles.toggleButtonActive]}
+          style={[styles.toggleButtonModern, viewMode === 'free' && styles.toggleButtonActiveFree]}
           onPress={() => setViewMode('free')}
+          activeOpacity={0.85}
         >
-          <Text style={[styles.toggleText, viewMode === 'free' && styles.toggleTextActive]}>
-            Free Parking
-          </Text>
+          <Text style={[styles.toggleTextModern, viewMode === 'free' && styles.toggleTextActiveModern]}>Free</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.toggleButton, viewMode === 'paid' && styles.toggleButtonActive]}
+          style={[styles.toggleButtonModern, viewMode === 'paid' && styles.toggleButtonActivePaid]}
           onPress={() => setViewMode('paid')}
+          activeOpacity={0.85}
         >
-          <Text style={[styles.toggleText, viewMode === 'paid' && styles.toggleTextActive]}>
-            Paid Parking
-          </Text>
+          <Text style={[styles.toggleTextModern, viewMode === 'paid' && styles.toggleTextActiveModern]}>Paid</Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.toggleButton, viewMode === 'seller' && styles.toggleButtonActive]}
-          onPress={() => setViewMode('seller')}
-        >
-          <Text style={[styles.toggleText, viewMode === 'seller' && styles.toggleTextActive]}>
-            Seller Mode
-          </Text>
-        </TouchableOpacity>
+        {userProfile?.is_seller && (
+          <TouchableOpacity
+            style={[styles.toggleButtonModern, viewMode === 'seller' && styles.toggleButtonActiveSeller]}
+            onPress={() => setViewMode('seller')}
+            activeOpacity={0.85}
+          >
+            <Text style={[styles.toggleTextModern, viewMode === 'seller' && styles.toggleTextActiveModern]}>Sell</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Hotspot Popup */}
@@ -604,15 +605,16 @@ export default function MapHomeScreen({ navigation }: any) {
       {/* Paid Parking List (Bottom Sheet) */}
       {viewMode === 'paid' && !selectedParking && !selectedHotspot && (
         <View style={styles.bottomSheet}>
-          <Text style={styles.bottomSheetTitle}>Nearby Paid Parking</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          <Text style={styles.bottomSheetTitleCentered}>Nearby Paid Parking</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.bottomSheetScrollContent}>
             {nearestPaidParkings.map((parking) => (
               <TouchableOpacity
                 key={parking.id}
                 style={styles.parkingCard}
                 onPress={() => setSelectedParking(parking)}
+                activeOpacity={0.85}
               >
-                <Text style={styles.cardTitle}>{parking.name}</Text>
+                <Text style={styles.cardTitleCentered}>{parking.name}</Text>
                 <Text style={styles.cardPrice}>₹{parking.price}/hr</Text>
                 <Text style={styles.cardAvailable}>
                   {parking.available}/{parking.slots} slots
@@ -627,7 +629,7 @@ export default function MapHomeScreen({ navigation }: any) {
       {/* Free Parking Loading Indicator */}
       {viewMode === 'free' && isLoadingPredictions && !selectedParking && !selectedHotspot && (
         <View style={styles.bottomSheet}>
-          <Text style={styles.bottomSheetTitle}>Loading Free Parking Predictions...</Text>
+          <Text style={styles.bottomSheetTitleCentered}>Loading Free Parking Predictions...</Text>
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#3b82f6" />
           </View>
@@ -637,7 +639,7 @@ export default function MapHomeScreen({ navigation }: any) {
       {/* Free Parking Empty State */}
       {viewMode === 'free' && !isLoadingPredictions && freeHotspots.length === 0 && !selectedParking && !selectedHotspot && (
         <View style={styles.bottomSheet}>
-          <Text style={styles.bottomSheetTitle}>No Free Parking Found</Text>
+          <Text style={styles.bottomSheetTitleCentered}>No Free Parking Found</Text>
           <Text style={styles.emptyStateText}>
             No free parking predictions available in this area. Try searching a different location.
           </Text>
@@ -658,6 +660,116 @@ export default function MapHomeScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
+  toggleContainerModern: {
+    position: 'absolute',
+    top: 110,
+    left: '5%',
+    right: '5%',
+    flexDirection: 'row',
+    backgroundColor: 'rgba(255,255,255,0.95)',
+    borderRadius: 20,
+    padding: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 8,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    zIndex: 15,
+  },
+  toggleButtonModern: {
+    flex: 1,
+    marginHorizontal: 3,
+    paddingVertical: 10,
+    paddingHorizontal: 6,
+    borderRadius: 16,
+    backgroundColor: 'transparent',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+  },
+  toggleButtonActiveFree: {
+    backgroundColor: '#22c55e',
+    shadowColor: '#22c55e',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  toggleButtonActivePaid: {
+    backgroundColor: '#f59e0b',
+    shadowColor: '#f59e0b',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  toggleButtonActiveSeller: {
+    backgroundColor: '#8b5cf6',
+    shadowColor: '#8b5cf6',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  toggleEmojiModern: {
+    fontSize: 16,
+    marginRight: 4,
+  },
+  toggleTextModern: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#6b7280',
+    letterSpacing: 0.2,
+    textAlign: 'center',
+  },
+  toggleTextActiveModern: {
+    color: '#fff',
+  },
+  bottomSheetTitleCentered: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 15,
+    textAlign: 'center',
+    color: '#3b82f6',
+    letterSpacing: 0.5,
+  },
+  bottomSheetScrollContent: {
+    alignItems: 'center',
+    paddingVertical: 5,
+  },
+  cardTitleCentered: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginBottom: 5,
+    textAlign: 'center',
+    color: '#1f2937',
+  },
+  headerContainer: {
+    position: 'absolute',
+    top: 15,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    zIndex: 50,
+  },
+  headerText: {
+    fontSize: Dimensions.get('window').width > 400 ? 28 : 22,
+    fontWeight: 'bold',
+    color: '#3b82f6',
+    letterSpacing: 1,
+    backgroundColor: 'rgba(255,255,255,0.95)',
+    paddingHorizontal: 24,
+    paddingVertical: 6,
+    borderRadius: 14,
+    overflow: 'hidden',
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+  },
   container: {
     flex: 1,
   },
@@ -688,13 +800,25 @@ const styles = StyleSheet.create({
     right: 15,
     top: 15,
   },
+  bottomActionsContainer: {
+    position: 'absolute',
+    left: '5%',
+    right: '5%',
+    bottom: 30,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    zIndex: 30,
+  },
   clearFilterButton: {
-    marginTop: 8,
     backgroundColor: '#3b82f6',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
+    paddingHorizontal: Dimensions.get('window').width * 0.06,
+    paddingVertical: Dimensions.get('window').height * 0.015,
+    borderRadius: 12,
     alignSelf: 'flex-start',
+    marginRight: 10,
+    minWidth: 100,
+    alignItems: 'center',
   },
   clearFilterText: {
     color: 'white',
@@ -740,19 +864,18 @@ const styles = StyleSheet.create({
     fontSize: 24,
   },
   clearRouteButton: {
-    position: 'absolute',
-    top: 50,
-    left: 20,
     backgroundColor: '#ef4444',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 25,
+    paddingHorizontal: Dimensions.get('window').width * 0.06,
+    paddingVertical: Dimensions.get('window').height * 0.015,
+    borderRadius: 12,
+    minWidth: 100,
+    alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 5,
-    zIndex: 20,
+    marginLeft: 10,
   },
   clearRouteButtonText: {
     color: 'white',

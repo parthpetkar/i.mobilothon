@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import Mapbox, { Camera, MarkerView } from '@rnmapbox/maps';
 import {
   View,
   Text,
@@ -39,23 +40,22 @@ export default function ParkingDetailsScreen({ route, navigation }: any) {
 
   return (
     <ScrollView style={styles.container}>
-      {/* Image Gallery */}
-      <ScrollView
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        style={styles.imageGallery}
-      >
-        {parking.images && parking.images.length > 0 ? (
-          parking.images.map((image, index) => (
-            <Image key={index} source={{ uri: image }} style={styles.image} />
-          ))
-        ) : (
-          <View style={styles.placeholderImage}>
-            <Text style={styles.placeholderText}>🅿️</Text>
-          </View>
-        )}
-      </ScrollView>
+      {/* Parking Location Map */}
+      <View style={styles.mapContainer}>
+        {/* Use Mapbox to show parking location */}
+        <Mapbox.MapView style={styles.map} styleURL={Mapbox.StyleURL.Street}>
+          <Mapbox.Camera
+            zoomLevel={16}
+            centerCoordinate={[parking.lng, parking.lat]}
+            animationMode="flyTo"
+          />
+          <Mapbox.MarkerView coordinate={[parking.lng, parking.lat]} anchor={{ x: 0.5, y: 0.5 }}>
+            <View style={styles.markerPin}>
+              <Text style={styles.markerPinText}>🅿️</Text>
+            </View>
+          </Mapbox.MarkerView>
+        </Mapbox.MapView>
+      </View>
 
       {/* Parking Info */}
       <View style={styles.infoContainer}>
@@ -177,23 +177,37 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'white',
   },
-  imageGallery: {
+  mapContainer: {
+    width: '100%',
     height: 250,
-  },
-  image: {
-    width: width,
-    height: 250,
-    resizeMode: 'cover',
-  },
-  placeholderImage: {
-    width: width,
-    height: 250,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+    overflow: 'hidden',
     backgroundColor: '#e5e7eb',
+  },
+  map: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+  },
+  markerPin: {
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 6,
+    borderWidth: 2,
+    borderColor: '#3b82f6',
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 4,
   },
-  placeholderText: {
-    fontSize: 80,
+  markerPinText: {
+    fontSize: 28,
+    color: '#3b82f6',
+    fontWeight: 'bold',
   },
   infoContainer: {
     padding: 20,

@@ -33,12 +33,12 @@ export default function AppNavigator() {
         <Stack.Screen
           name="MapHome"
           component={MapHomeScreen}
-          options={{ title: 'Smart Parking' }}
+          options={{ title: 'Smart Parking', headerTitleAlign: 'center' }}
         />
         <Stack.Screen
           name="ParkingDetails"
           component={ParkingDetailsScreen}
-          options={{ title: 'Parking Details' }}
+          options={{ title: 'Parking Details', headerTitleAlign: 'center' }}
         />
 
         {/* Auth Screens */}
