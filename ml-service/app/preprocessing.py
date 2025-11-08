@@ -7,7 +7,11 @@ def preprocess_data(df):
     df = df.copy()
     df['Timestamp'] = pd.to_datetime(df['Timestamp'], errors='coerce')
     wib = pytz.timezone("Asia/Jakarta")
-    df['Timestamp_WIB'] = df['Timestamp'].dt.tz_localize('UTC').dt.tz_convert(wib)
+    # Only localize if Timestamp is naive
+    if df['Timestamp'].dt.tz is None:
+        df['Timestamp_WIB'] = df['Timestamp'].dt.tz_localize('UTC').dt.tz_convert(wib)
+    else:
+        df['Timestamp_WIB'] = df['Timestamp'].dt.tz_convert(wib)
     
     # Time features
     df['Hour'] = df['Timestamp_WIB'].dt.hour
@@ -50,8 +54,9 @@ def preprocess_data(df):
     time_map = {'Evening':0,'Night':1,'Afternoon':2,'Morning':3}
     traffic_map = {'low':0,'medium':1,'high':2}
     
-    system_code_map_global = {code: idx for idx, code in enumerate(df['SystemCodeNumber'].unique())}
-    df['SystemCodeNumber'] = df['SystemCodeNumber'].map(system_code_map_global).fillna(-1).astype(int)
+    # Use consistent hash-based encoding for SystemCodeNumber instead of dynamic mapping
+    # This ensures same parking spot always gets same encoded value
+    df['SystemCodeNumber'] = df['SystemCodeNumber'].apply(lambda x: hash(str(x)) % 10000).astype(int)
     df['VehicleType'] = df['VehicleType'].map(vehicle_map).fillna(-1).astype(int)
     df['DayName'] = df['DayName'].map(day_map).fillna(-1).astype(int)
     df['TimeCategory'] = df['TimeCategory'].map(time_map).fillna(-1).astype(int)

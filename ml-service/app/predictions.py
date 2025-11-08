@@ -40,11 +40,19 @@ def predict_parking_dynamics(raw_data_df):
     processed_data['PredOccupancy_Ratio'] = processed_data['PredOccupancy']/processed_data['Capacity']
     processed_data['PredOccupancy_Ratio'] = processed_data['PredOccupancy_Ratio'].clip(0,1)
     
+    # Map traffic back to string for price calculation
     reverse_traffic_map = {0:'low',1:'medium',2:'high'}
-    processed_data['TrafficConditionNearby_Category'] = processed_data['TrafficConditionNearby'].map(reverse_traffic_map)
-    processed_data['PredictedDynamicPricePerHour'] = processed_data.apply(
-        lambda row: dynamic_price(row, base=BASE_PRICE_PER_HOUR), axis=1
-    )
+    # Create a temporary column with string traffic for price calculation
+    processed_data['TrafficConditionNearby_Str'] = processed_data['TrafficConditionNearby'].map(reverse_traffic_map).fillna('low')
+    
+    # Calculate dynamic price using string traffic condition
+    def apply_dynamic_price(row):
+        # Create a modified row with string traffic for price calculation
+        price_row = row.copy()
+        price_row['TrafficConditionNearby'] = price_row['TrafficConditionNearby_Str']
+        return dynamic_price(price_row, base=BASE_PRICE_PER_HOUR)
+    
+    processed_data['PredictedDynamicPricePerHour'] = processed_data.apply(apply_dynamic_price, axis=1)
     
     return processed_data
 
@@ -70,19 +78,21 @@ def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> fl
 
 def predict_free_parking_availability(
     user_lat: float,
-    user_lon: float,
-    radius_meters: int = 300
+    user_lon: float
 ) -> List[Dict]:
     """
     Predict free parking availability for parking spots near user location.
+    Each parking spot's availability radius is dynamically computed based on predicted occupancy:
+    - Low occupancy (< 0.3): 1500m radius
+    - Medium occupancy (0.3-0.6): 800m radius  
+    - High occupancy (> 0.6): 300m radius
     
     Args:
         user_lat: User's latitude
         user_lon: User's longitude
-        radius_meters: Search radius in meters (default: 300)
     
     Returns:
-        List of parking spots with availability predictions
+        List of parking spots with availability predictions and dynamic radius
     """
     from .config import supabase
     
@@ -90,29 +100,12 @@ def predict_free_parking_availability(
     response = supabase.schema("parking").table("parking_features").select("*").execute()
     if not response.data:
         return []
-    
     df = pd.DataFrame(response.data)
-    
     # Store original SystemCodeNumber before preprocessing
     df['OriginalSystemCode'] = df['SystemCodeNumber'].copy()
     
-    # Filter by distance if coordinates are provided
-    if user_lat and user_lon:
-        df['distance'] = df.apply(
-            lambda row: haversine_distance(
-                user_lat, user_lon, 
-                row['Latitude'], row['Longitude']
-            ), 
-            axis=1
-        )
-        df = df[df['distance'] <= radius_meters]
-    
-    if df.empty:
-        return []
-    
     # Prepare features for prediction (reuse existing preprocessing)
     processed_data = preprocess_data(df)
-    
     # Extract model-required features
     feature_cols = [
         'SystemCodeNumber', 'Capacity', 'DayName', 'VehicleType', 'TrafficConditionNearby',
@@ -126,7 +119,6 @@ def predict_free_parking_availability(
             processed_data[col] = 0
     
     X_predict = processed_data[feature_cols]
-    
     # Predict occupancy
     predicted_occupancy = loaded_occupancy_model.predict(X_predict)
     processed_data['PredOccupancy'] = predicted_occupancy.round()
@@ -136,6 +128,31 @@ def predict_free_parking_availability(
     # Calculate availability probability (1 - occupancy ratio)
     processed_data['availability_probability'] = 1 - processed_data['PredOccupancy_Ratio']
     
+    # Compute ML-based availability_radius based on predicted occupancy
+    def compute_availability_radius(pred_occupancy_ratio: float) -> int:
+        """
+        Compute dynamic availability radius based on predicted occupancy:
+        - Low occupancy (< 0.3): 1500m radius (more space available)
+        - Medium occupancy (0.3-0.6): 800m radius (moderate space)
+        - High occupancy (> 0.6): 300m radius (limited space)
+        """
+        if pred_occupancy_ratio < 0.3:
+            return 1500
+        elif pred_occupancy_ratio <= 0.6:
+            return 800
+        else:
+            return 300
+    
+    processed_data['availability_radius'] = processed_data['PredOccupancy_Ratio'].apply(compute_availability_radius)
+    
+    # Debug logging
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info(f"Predictions summary: Capacity avg={processed_data['Capacity'].mean():.1f}, "
+                f"PredOccupancy avg={processed_data['PredOccupancy'].mean():.1f}, "
+                f"Availability avg={processed_data['availability_probability'].mean():.3f}, "
+                f"Radius avg={processed_data['availability_radius'].mean():.1f}m")
+    
     # Build response
     results = []
     for _, row in processed_data.iterrows():
@@ -144,7 +161,6 @@ def predict_free_parking_availability(
             "lat": float(row['Latitude']),
             "lon": float(row['Longitude']),
             "availabilityProbability": float(row['availability_probability']),
-            "radius": radius_meters
+            "radius": int(row['availability_radius'])  # Use ML-computed radius
         })
-    
     return results

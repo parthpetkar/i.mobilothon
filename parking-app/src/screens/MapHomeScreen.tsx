@@ -50,10 +50,17 @@ export default function MapHomeScreen({ navigation }: any) {
           ];
           setUserLocation(userCoords);
           setMapCenter(userCoords);
-          setSelectedLocation({
-            lat: location.coords.latitude,
-            lng: location.coords.longitude,
-          });
+          
+          // Center camera on user location
+          if (cameraRef.current) {
+            console.log('[MapHome] Centering on user location:', userCoords);
+            cameraRef.current.setCamera({
+              centerCoordinate: userCoords,
+              zoomLevel: 13,
+              animationDuration: 1000,
+            });
+          }
+          // Don't set selectedLocation initially - let it load all parkings
         } else {
           Alert.alert(
             'Location Permission',
@@ -67,26 +74,46 @@ export default function MapHomeScreen({ navigation }: any) {
     })();
   }, []);
 
-  // Fetch free parking predictions when location changes (for free mode)
+  // Load initial parkings on mount
   useEffect(() => {
-    if (viewMode === 'free' && selectedLocation) {
+    console.log('[MapHome] Initial load - fetching all Pune parkings, viewMode:', viewMode);
+    // Fetch free parking predictions for entire Pune
+    if (viewMode === 'free') {
+      fetchFreeParkingPredictions();
+    }
+    // Fetch paid parkings for entire Pune
+    if (viewMode === 'paid') {
+      const location: [number, number] = PUNE_CENTER as [number, number];
+      fetchParkingsNear(location, 20000);
+    }
+  }, [viewMode]); // Re-fetch when view mode changes
+
+  // Fetch free parking predictions when view mode changes or location changes
+  useEffect(() => {
+    if (viewMode === 'free') {
       fetchFreeParkingPredictions();
     }
   }, [selectedLocation, viewMode]);
   
   const fetchFreeParkingPredictions = async () => {
-    if (!selectedLocation) return;
-    
     setIsLoadingPredictions(true);
     try {
-      console.log('[MapHome] Fetching free parking predictions for:', selectedLocation);
+      // Use selected location or Pune center as default
+      const queryLat = selectedLocation?.lat || PUNE_CENTER[1];
+      const queryLon = selectedLocation?.lng || PUNE_CENTER[0];
+      
+      console.log('[MapHome] Fetching free parking predictions for:', 
+        selectedLocation ? selectedLocation : 'Pune Center (default)');
+      
       const predictions = await getFreeParkingPredictions(
-        selectedLocation.lat,
-        selectedLocation.lng,
-        1000 // 1km radius
+        queryLat,
+        queryLon,
+        selectedLocation ? 1000 : 5000 // Larger radius when no location selected
       );
       console.log('[MapHome] Got predictions:', predictions);
       setFreeHotspots(predictions);
+      
+      // Don't auto-center - let user control camera position
     } catch (error) {
       console.error('[MapHome] Error fetching predictions:', error);
       Alert.alert(
@@ -101,11 +128,19 @@ export default function MapHomeScreen({ navigation }: any) {
     }
   };
 
-  // Fetch parkings when location changes (for paid mode)
+  // Fetch parkings when view mode changes or location changes (for paid mode)
   useEffect(() => {
-    if (viewMode === 'paid' && selectedLocation) {
-      const location: [number, number] = [selectedLocation.lng, selectedLocation.lat];
-      fetchParkingsNear(location, 10000); // 10km radius
+    if (viewMode === 'paid') {
+      // Use selected location or Pune center as default
+      const location: [number, number] = selectedLocation 
+        ? [selectedLocation.lng, selectedLocation.lat] as [number, number]
+        : PUNE_CENTER as [number, number];
+      
+      const radius = selectedLocation ? 10000 : 20000; // Larger radius when no location selected
+      console.log('[MapHome] Fetching paid parkings for:', 
+        selectedLocation ? selectedLocation : 'Pune Center (default)', 'radius:', radius);
+      
+      fetchParkingsNear(location, radius);
     }
   }, [selectedLocation, viewMode]);
 
@@ -129,39 +164,57 @@ export default function MapHomeScreen({ navigation }: any) {
 
   const handleSelectLocation = (result: any) => {
     const [lng, lat] = result.center;
-    setMapCenter([lng, lat]);
+    const newLocation: [number, number] = [lng, lat];
+    
+    console.log('[MapHome] Selected location:', result.place_name, 'coords:', newLocation);
+    
+    setMapCenter(newLocation);
     setSelectedLocation({ lat, lng });
     setSearchQuery(result.place_name);
     setSearchResults([]);
     
-    // Animate camera to new location
-    cameraRef.current?.setCamera({
-      centerCoordinate: [lng, lat],
-      zoomLevel: 14,
-      animationDuration: 1000,
-    });
+    // Animate camera to new location immediately
+    if (cameraRef.current) {
+      console.log('[MapHome] Animating camera to:', newLocation);
+      cameraRef.current.setCamera({
+        centerCoordinate: newLocation,
+        zoomLevel: 14,
+        animationDuration: 1000,
+      });
+    }
   };
 
   const nearestHotspots = useMemo(() => {
-    if (!selectedLocation) return freeHotspots;
-    return freeHotspots
+    console.log('[MapHome] nearestHotspots memo - selectedLocation:', selectedLocation);
+    if (!selectedLocation) {
+      console.log('[MapHome] No selected location, showing all hotspots:', freeHotspots.length);
+      return freeHotspots;
+    }
+    const nearest = freeHotspots
       .map((h) => ({
         ...h,
         distance: calculateDistance(selectedLocation.lat, selectedLocation.lng, h.lat, h.lng),
       }))
       .sort((a, b) => a.distance - b.distance)
       .slice(0, 5);
-  }, [selectedLocation]);
+    console.log('[MapHome] Showing 5 nearest hotspots out of:', freeHotspots.length, 'nearest:', nearest.map(h => ({ label: h.label, distance: h.distance })));
+    return nearest;
+  }, [selectedLocation, freeHotspots]);
 
   const nearestPaidParkings = useMemo(() => {
-    if (!selectedLocation) return paidParkings;
-    return paidParkings
+    if (!selectedLocation) {
+      console.log('[MapHome] No selected location, showing all paid parkings:', paidParkings.length);
+      return paidParkings;
+    }
+    const nearest = paidParkings
       .map((p) => ({
         ...p,
         distance: calculateDistance(selectedLocation.lat, selectedLocation.lng, p.lat, p.lng),
       }))
       .sort((a, b) => a.distance - b.distance)
       .slice(0, 10);
+    console.log('[MapHome] Showing 10 nearest paid parkings out of:', paidParkings.length);
+    return nearest;
   }, [selectedLocation, paidParkings]);
 
   const handleNavigate = async (lat: number, lng: number) => {
@@ -236,23 +289,7 @@ export default function MapHomeScreen({ navigation }: any) {
   };
 
   // Create GeoJSON for heatmap circles
-  const heatmapGeoJSON: any = useMemo(() => {
-    return {
-      type: 'FeatureCollection' as const,
-      features: nearestHotspots.map((hotspot, index) => ({
-        type: 'Feature' as const,
-        id: `hotspot-${index}`,
-        properties: {
-          probability: hotspot.probability,
-          radius: hotspot.radius || 100, // Use custom radius in meters or default to 100m
-        },
-        geometry: {
-          type: 'Point' as const,
-          coordinates: [hotspot.lng, hotspot.lat],
-        },
-      })),
-    };
-  }, [nearestHotspots]);
+  // Removed - using pinpoint markers only
 
   return (
     <View style={styles.container}>
@@ -267,36 +304,6 @@ export default function MapHomeScreen({ navigation }: any) {
 
         {/* User Location */}
         {locationPermission && <LocationPuck pulsing={{ isEnabled: true }} />}
-
-        {/* Free Parking Heatmap Circles */}
-        {(viewMode === 'free' || viewMode === 'seller') && (
-          <ShapeSource id="heatmapSource" shape={heatmapGeoJSON}>
-            <CircleLayer
-              id="heatmapCircles"
-              style={{
-                circlePitchAlignment: 'map',
-                circleRadius: [
-                  'interpolate',
-                  ['exponential', 2],
-                  ['zoom'],
-                  0, 0,
-                  20, ['*', ['/', ['get', 'radius'], 0.075], ['/', 1, ['^', 2, ['-', 20, ['zoom']]]]]
-                ],
-                circleColor: [
-                  'interpolate',
-                  ['linear'],
-                  ['get', 'probability'],
-                  0,
-                  'rgba(34, 197, 94, 0.2)',
-                  1,
-                  'rgba(34, 197, 94, 0.6)',
-                ],
-                circleStrokeWidth: 2,
-                circleStrokeColor: 'rgba(34, 197, 94, 0.8)',
-              }}
-            />
-          </ShapeSource>
-        )}
 
         {/* Navigation Route */}
         {currentRoute && (
@@ -334,32 +341,50 @@ export default function MapHomeScreen({ navigation }: any) {
         )}
 
         {/* Free Parking Markers */}
-        {(viewMode === 'free' || viewMode === 'seller') &&
-          nearestHotspots.map((hotspot, index) => (
-            <MarkerView
-              key={`hotspot-${index}`}
-              coordinate={[hotspot.lng, hotspot.lat]}
-              anchor={{ x: 0.5, y: 0.5 }}
-            >
-              <TouchableOpacity
-                style={styles.hotspotMarker}
-                onPress={() => {
-                  console.log('Hotspot clicked:', hotspot.label);
-                  setSelectedParking(null);
-                  setSelectedHotspot(hotspot);
-                }}
-                onPressOut={() => {
-                  console.log('Hotspot touched:', hotspot.label);
-                  setSelectedParking(null);
-                  setSelectedHotspot(hotspot);
-                }}
-                activeOpacity={0.7}
-                hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
+        {(viewMode === 'free' || viewMode === 'seller') && (() => {
+          console.log('[MapHome] Rendering free parking markers, count:', nearestHotspots.length, 'viewMode:', viewMode);
+          return nearestHotspots.map((hotspot, index) => {
+            return (
+              <MarkerView
+                key={`hotspot-${hotspot.label || index}`}
+                coordinate={[hotspot.lng, hotspot.lat]}
+                anchor={{ x: 0.5, y: 0.5 }}
               >
-                <Text style={styles.hotspotMarkerText}>🅿️</Text>
-              </TouchableOpacity>
-            </MarkerView>
-          ))}
+                <TouchableOpacity
+                  style={[
+                    styles.hotspotMarker,
+                    // Vary marker color based on probability
+                    { 
+                      borderColor: hotspot.probability > 0.7 ? '#22c55e' : 
+                                   hotspot.probability > 0.4 ? '#f59e0b' : '#ef4444',
+                      borderWidth: 3,
+                    }
+                  ]}
+                  onPress={() => {
+                    console.log('Hotspot clicked:', hotspot.label, 'probability:', hotspot.probability);
+                    setSelectedParking(null);
+                    setSelectedHotspot(hotspot);
+                  }}
+                  onPressOut={() => {
+                    console.log('Hotspot touched:', hotspot.label);
+                    setSelectedParking(null);
+                    setSelectedHotspot(hotspot);
+                  }}
+                  activeOpacity={0.7}
+                  hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
+                >
+                  <Text style={styles.hotspotMarkerText}>🅿️</Text>
+                  {/* Show probability badge on marker */}
+                  <View style={styles.probabilityBadge}>
+                    <Text style={styles.probabilityBadgeText}>
+                      {(hotspot.probability * 100).toFixed(0)}%
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              </MarkerView>
+            );
+          });
+        })()}
 
         {/* Paid Parking Markers */}
         {(viewMode === 'paid' || viewMode === 'seller') &&
@@ -405,6 +430,19 @@ export default function MapHomeScreen({ navigation }: any) {
           <View style={styles.searchLoading}>
             <ActivityIndicator size="small" color="#3b82f6" />
           </View>
+        )}
+        {/* Clear Filter Button - shows when location is selected */}
+        {selectedLocation && (
+          <TouchableOpacity
+            style={styles.clearFilterButton}
+            onPress={() => {
+              setSelectedLocation(null);
+              setSearchQuery('');
+              console.log('[MapHome] Cleared location filter - showing all parkings');
+            }}
+          >
+            <Text style={styles.clearFilterText}>✕ Show All</Text>
+          </TouchableOpacity>
         )}
         {searchResults.length > 0 && (
           <View style={styles.suggestions}>
@@ -650,6 +688,19 @@ const styles = StyleSheet.create({
     right: 15,
     top: 15,
   },
+  clearFilterButton: {
+    marginTop: 8,
+    backgroundColor: '#3b82f6',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+  },
+  clearFilterText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '600',
+  },
   suggestions: {
     backgroundColor: 'white',
     marginTop: 5,
@@ -757,6 +808,21 @@ const styles = StyleSheet.create({
   },
   hotspotMarkerText: {
     fontSize: 24,
+  },
+  probabilityBadge: {
+    position: 'absolute',
+    bottom: -8,
+    backgroundColor: '#3b82f6',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'white',
+  },
+  probabilityBadgeText: {
+    color: 'white',
+    fontSize: 9,
+    fontWeight: 'bold',
   },
   paidMarker: {
     paddingHorizontal: 14,

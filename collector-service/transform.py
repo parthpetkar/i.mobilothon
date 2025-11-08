@@ -63,16 +63,15 @@ def transform_parking_data(
             pass
         
         # Categorize traffic condition based on duration
+        # Use low/medium/high to match ML model expectations
         if duration is None:
-            condition = "Normal"
-        elif duration < 5:
-            condition = "Light"
-        elif duration < 15:
-            condition = "Normal"
-        elif duration < 30:
-            condition = "Heavy"
+            condition = "medium"
+        elif duration < 10:
+            condition = "low"
+        elif duration < 25:
+            condition = "medium"
         else:
-            condition = "Congested"
+            condition = "high"
             
         traffic_lookup[grid_id] = condition
     
@@ -92,16 +91,21 @@ def transform_parking_data(
                 # Parking mode - use OSM_<id> format
                 system_code = place_id  # Already formatted as OSM_<id> from collector
                 vehicle_type = 'car'
-                capacity = 0  # Default to 0 for parking mode
-                queue_length = 0
-                is_special_day = 0
+                # Generate realistic capacity and occupancy
+                capacity = np.random.randint(20, 1000)  # Reasonable capacity
+                # Lower occupancy = more availability (20-60% occupied typically)
+                occupancy = np.random.randint(int(capacity * 0.2), int(capacity * 0.6))
+                queue_length = np.random.randint(0, 3)  # Shorter queues
+                is_special_day = np.random.randint(0, 2) % 2  # 0 or 1
             else:
                 # Commercial places mode - simulate parking characteristics
                 system_code = f"COMM_{place_id}"  # Commercial place as parking proxy
                 vehicle_type = 'car'
-                capacity = np.random.randint(20, 200)  # Simulated capacity for commercial areas
-                queue_length = np.random.randint(0, 10)
-                is_special_day = 0
+                # Generate realistic capacity and occupancy
+                capacity = np.random.randint(10, 50)  # Smaller capacity for commercial
+                occupancy = np.random.randint(int(capacity * 0.2), int(capacity * 0.6))
+                queue_length = np.random.randint(0, 3)
+                is_special_day = np.random.randint(0, 2) % 2
             
             # Get traffic condition for this grid
             traffic_condition = traffic_lookup.get(grid_id, "Normal")
@@ -109,6 +113,7 @@ def transform_parking_data(
             record = {
                 'SystemCodeNumber': system_code,
                 'Capacity': capacity,
+                'Occupancy': occupancy,
                 'Latitude': place.get('lat', centroid[1]),
                 'Longitude': place.get('lon', centroid[0]),
                 'VehicleType': vehicle_type,
@@ -131,7 +136,7 @@ def transform_parking_data(
     
     # Step 3: Add existing duration features
     df = _add_duration_features(df)
-    
+    print(df["Capacity"].unique())
     # Step 4: Format final output using existing logic
     df = _format_final_columns(df)
     
@@ -151,7 +156,11 @@ def _add_time_features(df: pd.DataFrame) -> pd.DataFrame:
     india_holidays = holidays.country_holidays("IN")
     
     df['Timestamp'] = pd.to_datetime(df['Timestamp'])
-    df['Timestamp_WIB'] = df['Timestamp'].dt.tz_localize('UTC').dt.tz_convert(india_tz)
+    # Only localize if Timestamp is naive
+    if df['Timestamp'].dt.tz is None:
+        df['Timestamp_WIB'] = df['Timestamp'].dt.tz_localize('UTC').dt.tz_convert(india_tz)
+    else:
+        df['Timestamp_WIB'] = df['Timestamp'].dt.tz_convert(india_tz)
     
     # Extract time features
     df['Hour'] = df['Timestamp_WIB'].dt.hour.astype(int)

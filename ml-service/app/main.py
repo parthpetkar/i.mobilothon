@@ -40,24 +40,26 @@ async def predict_entire_table():
 @app.get("/free-parking/predictions")
 async def get_free_parking_predictions(
     lat: float = Query(..., description="User latitude"),
-    lon: float = Query(..., description="User longitude"),
-    radius_meters: int = Query(300, description="Search radius in meters", ge=50, le=5000)
+    lon: float = Query(..., description="User longitude")
 ):
     """
     Get free parking availability predictions near user location.
     
-    Returns parking spots with availability probability based on ML model predictions.
+    Returns parking spots with availability probability and ML-computed radius
+    based on predicted occupancy:
+    - Low occupancy (< 0.3): 1500m radius
+    - Medium occupancy (0.3-0.6): 800m radius
+    - High occupancy (> 0.6): 300m radius
     """
     try:
-        parking_spots = predict_free_parking_availability(lat, lon, radius_meters)
+        parking_spots = predict_free_parking_availability(lat, lon)
         
         return {
             "parking_spots": parking_spots,
             "count": len(parking_spots),
             "query": {
                 "lat": lat,
-                "lon": lon,
-                "radius_meters": radius_meters
+                "lon": lon
             }
         }
     except Exception as e:
