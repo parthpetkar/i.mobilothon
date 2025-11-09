@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import { PaidParking, Booking, SellerParking } from '../types';
+import { PaidParking, Booking, SellerParking, FreeHotspot } from '../types';
 import { BACKEND_URL, ML_SERVICE_URL } from '../config/env';
 
 const API_BASE_URL = BACKEND_URL;
@@ -77,7 +77,7 @@ export interface GetParkingsParams {
 export interface CreateParkingData {
   name: string;
   location: [number, number]; // [longitude, latitude]
-  price_per_hour: number;
+  price_per_hour?: number; // Optional - will be set by ML service
   slots: number;
   available: number;
   amenities?: string[];
@@ -228,7 +228,7 @@ export interface BookingApiResponse {
   duration_hours: number;
   total_price: number;
   status: string;
-  qr_code: string;
+  otp: string;
   parking_name?: string;
 }
 
@@ -250,7 +250,7 @@ export async function createBooking(bookingData: CreateBookingData): Promise<Boo
     duration: booking.duration_hours,
     totalPrice: booking.total_price,
     timestamp: booking.start_time,
-    qrCode: booking.qr_code,
+    otp: booking.otp,
     status: booking.status === 'completed' ? 'completed' : 'active',
     userId: booking.user_email,
   };
@@ -269,7 +269,7 @@ export async function getUserBookings(): Promise<Booking[]> {
     duration: booking.duration_hours,
     totalPrice: booking.total_price,
     timestamp: booking.start_time,
-    qrCode: booking.qr_code,
+    otp: booking.otp,
     status: booking.status === 'completed' ? 'completed' : 'active',
     userId: booking.user_email,
   }));
@@ -288,7 +288,7 @@ export async function getBookingById(bookingId: number): Promise<Booking> {
     duration: booking.duration_hours,
     totalPrice: booking.total_price,
     timestamp: booking.start_time,
-    qrCode: booking.qr_code,
+    otp: booking.otp,
     status: booking.status === 'completed' ? 'completed' : 'active',
     userId: booking.user_email,
   };
@@ -312,7 +312,7 @@ export async function updateBooking(bookingId: number, updates: UpdateBookingDat
     duration: booking.duration_hours,
     totalPrice: booking.total_price,
     timestamp: booking.start_time,
-    qrCode: booking.qr_code,
+    otp: booking.otp,
     status: booking.status === 'completed' ? 'completed' : 'active',
     userId: booking.user_email,
   };
@@ -324,6 +324,16 @@ export async function updateBooking(bookingId: number, updates: UpdateBookingDat
 export async function cancelBooking(bookingId: number): Promise<void> {
   await fetchWithAuth(`${API_BASE_URL}/bookings/${bookingId}`, {
     method: 'DELETE',
+  });
+}
+
+/**
+ * Verify OTP for a booking (seller only)
+ */
+export async function verifyBookingOTP(bookingId: number, otp: string): Promise<void> {
+  await fetchWithAuth(`${API_BASE_URL}/bookings/${bookingId}/verify-otp`, {
+    method: 'POST',
+    body: JSON.stringify({ otp }),
   });
 }
 

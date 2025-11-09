@@ -37,7 +37,7 @@ export interface Booking {
   duration: number;
   totalPrice: number;
   timestamp: string;
-  qrCode: string;
+  otp: string;
   status: 'active' | 'completed';
   userId: string;
 }

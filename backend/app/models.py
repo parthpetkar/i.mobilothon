@@ -53,6 +53,7 @@ class BookingResponse(BaseModel):
     startTime: datetime = Field(..., alias="start_time")
     endTime: datetime = Field(..., alias="end_time")
     status: str = "confirmed"
+    otp: str = ""
 
     class Config:
         from_attributes = True

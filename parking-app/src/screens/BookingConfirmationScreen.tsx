@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, ActivityIndicator } from 'react-native';
-import QRCode from 'react-native-qrcode-svg';
 import { useAppStore } from '../store/appStore';
 import { Booking } from '../types';
-import { generateQRCode, formatCurrency } from '../utils/helpers';
+import { formatCurrency } from '../utils/helpers';
 
 export default function BookingConfirmationScreen({ route, navigation }: any) {
   const { parking, duration, totalPrice } = route.params;
@@ -73,13 +72,15 @@ export default function BookingConfirmationScreen({ route, navigation }: any) {
             </View>
           </View>
 
-          {/* QR Code */}
-          <View style={styles.qrContainer}>
-            <Text style={styles.qrTitle}>Show this QR at entrance</Text>
-            <View style={styles.qrCodeWrapper}>
-              <QRCode value={booking.qrCode} size={200} />
+          {/* OTP Display */}
+          <View style={styles.otpContainer}>
+            <Text style={styles.otpTitle}>Share this OTP with the seller</Text>
+            <View style={styles.otpBox}>
+              <Text style={styles.otpCode}>{booking.otp}</Text>
             </View>
-            <Text style={styles.qrCode}>{booking.qrCode}</Text>
+            <Text style={styles.otpSubtitle}>
+              The seller will verify this code to confirm your entry
+            </Text>
           </View>
 
           {/* Action Buttons */}
@@ -332,30 +333,41 @@ const styles = StyleSheet.create({
     color: '#3b82f6',
     fontSize: 16,
   },
-  qrContainer: {
+  otpContainer: {
     alignItems: 'center',
     marginBottom: 30,
+    width: '100%',
   },
-  qrTitle: {
+  otpTitle: {
     fontSize: 16,
     fontWeight: '600',
     marginBottom: 20,
+    color: '#374151',
   },
-  qrCodeWrapper: {
-    backgroundColor: 'white',
-    padding: 20,
+  otpBox: {
+    backgroundColor: '#3b82f6',
+    paddingHorizontal: 40,
+    paddingVertical: 25,
     borderRadius: 15,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 5,
     marginBottom: 15,
   },
-  qrCode: {
-    fontSize: 12,
-    color: '#666',
+  otpCode: {
+    fontSize: 48,
+    fontWeight: 'bold',
+    color: 'white',
+    letterSpacing: 8,
     fontFamily: 'monospace',
+  },
+  otpSubtitle: {
+    fontSize: 13,
+    color: '#6b7280',
+    textAlign: 'center',
+    paddingHorizontal: 20,
   },
   rateButton: {
     backgroundColor: '#fbbf24',

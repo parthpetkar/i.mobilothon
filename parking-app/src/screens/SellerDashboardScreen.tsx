@@ -75,12 +75,20 @@ export default function SellerDashboardScreen({ navigation }: any) {
     <ScrollView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Seller Dashboard</Text>
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={() => navigation.navigate('AddListing')}
-        >
-          <Text style={styles.addButtonText}>+ Add Listing</Text>
-        </TouchableOpacity>
+        <View style={styles.headerButtons}>
+          <TouchableOpacity
+            style={styles.verifyButton}
+            onPress={() => navigation.navigate('VerifyOTP')}
+          >
+            <Text style={styles.verifyButtonText}>🔐 Verify OTP</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={() => navigation.navigate('AddListing')}
+          >
+            <Text style={styles.addButtonText}>+ Add Listing</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Analytics Cards */}
@@ -208,6 +216,22 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: 'bold',
+    flex: 1,
+  },
+  headerButtons: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  verifyButton: {
+    backgroundColor: '#22c55e',
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  verifyButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 13,
   },
   addButton: {
     backgroundColor: '#3b82f6',

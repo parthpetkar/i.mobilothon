@@ -1,0 +1,27 @@
+# .easignore for Expo EAS Build
+# Ignore environment files containing secrets
+.env
+.env.local
+.env.production
+.env.development
+
+# Ignore node_modules (handled by EAS automatically)
+node_modules/
+
+# Ignore build outputs
+build/
+android/app/build/
+
+# Ignore logs and temp files
+*.log
+*.tmp
+
+# Ignore OS-specific files
+.DS_Store
+Thumbs.db
+
+# Ignore IDE/editor files
+.vscode/
+.idea/
+
+# Add other files/folders to ignore as needed

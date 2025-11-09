@@ -8,6 +8,7 @@ import BookingConfirmationScreen from '../screens/BookingConfirmationScreen';
 import RatingScreen from '../screens/RatingScreen';
 import SellerDashboardScreen from '../screens/SellerDashboardScreen';
 import AddListingScreen from '../screens/AddListingScreen';
+import VerifyOTPScreen from '../screens/VerifyOTPScreen';
 import LoginScreen from '../screens/LoginScreen';
 import SignupScreen from '../screens/SignupScreen';
 import ProfileScreen from '../screens/ProfileScreen';
@@ -80,6 +81,11 @@ export default function AppNavigator() {
           name="AddListing"
           component={AddListingScreen}
           options={{ title: 'Add New Parking' }}
+        />
+        <Stack.Screen
+          name="VerifyOTP"
+          component={VerifyOTPScreen}
+          options={{ title: 'Verify Customer Entry' }}
         />
       </Stack.Navigator>
     </NavigationContainer>

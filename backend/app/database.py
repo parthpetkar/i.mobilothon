@@ -4,6 +4,7 @@ from app.models import ParkingCreate, BookingCreate
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 import json
+import random
 from app.redis_client import acquire_lock, release_lock, acquire_lock_with_retry
 
 # client: Client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
@@ -117,16 +118,20 @@ async def create_booking(create_data: BookingCreate, user_id: str, redis_client)
         if overlap >= parking["available"]:
             raise ValueError("No available slots")
 
+        # Generate 6-digit OTP
+        otp = str(random.randint(100000, 999999))
+
         data = {
             "parking_id": create_data.parkingId,
             "user_id": user_id,
             "start_time": create_data.startTime.isoformat(),
             "end_time": create_data.endTime.isoformat(),
-            "status": "CONFIRMED"  # <-- uppercase
+            "status": "CONFIRMED",  # <-- uppercase
+            "otp": otp
         }
         response = client.table("bookings").insert(data).execute()
         if response.data:
-            print(f"Event: booking.created - ID: {response.data[0]['id']}")
+            print(f"Event: booking.created - ID: {response.data[0]['id']}, OTP: {otp}")
             return response.data[0]
         raise ValueError("Failed to create booking")
     finally:
