@@ -1,0 +1,104 @@
+SMART PARKING SYSTEM - PERFORMANCE BENCHMARK REPORT
+================================================================================
+
+Test Date: 2025-11-09 22:47:44
+Backend URL: https://imobilothon-backend.onrender.com
+ML Service URL: http://localhost:8001
+Iterations per test: 100
+
+
+1. Backend Health Check
+--------------------------------------------------------------------------------
+Average Response Time:    362.18 ms
+Median Response Time:     306.35 ms
+Min Response Time:        262.63 ms
+Max Response Time:        856.03 ms
+95th Percentile (P95):    848.90 ms
+99th Percentile (P99):    856.03 ms
+Standard Deviation:       162.51 ms
+Success Rate:             100.0%
+Total Requests:           50
+
+2. Geospatial Parking Search (PostGIS)
+--------------------------------------------------------------------------------
+Average Response Time:    555.05 ms
+Median Response Time:     542.79 ms
+Min Response Time:        511.88 ms
+Max Response Time:        1089.95 ms
+95th Percentile (P95):    593.40 ms
+99th Percentile (P99):    1089.40 ms
+Standard Deviation:       76.26 ms
+Success Rate:             100.0%
+Total Requests:           100
+
+3. ML-Powered Free Parking Predictions
+--------------------------------------------------------------------------------
+Average Response Time:    994.80 ms
+Median Response Time:     989.49 ms
+Min Response Time:        783.85 ms
+Max Response Time:        1523.56 ms
+95th Percentile (P95):    1308.98 ms
+99th Percentile (P99):    1522.56 ms
+Standard Deviation:       130.66 ms
+Success Rate:             100.0%
+Total Requests:           100
+
+5. Database Read Performance (Multiple Locations)
+--------------------------------------------------------------------------------
+Average Response Time:    553.34 ms
+Median Response Time:     548.22 ms
+Min Response Time:        508.21 ms
+Max Response Time:        706.34 ms
+95th Percentile (P95):    610.67 ms
+99th Percentile (P99):    706.32 ms
+Standard Deviation:       32.79 ms
+Success Rate:             100.0%
+Total Requests:           100
+
+6. Concurrent Load Test (50 Users)
+--------------------------------------------------------------------------------
+Average Response Time:    5202.49 ms
+Median Response Time:     5179.65 ms
+Min Response Time:        543.52 ms
+Max Response Time:        9897.20 ms
+95th Percentile (P95):    9678.49 ms
+99th Percentile (P99):    9897.20 ms
+Standard Deviation:       2780.43 ms
+Success Rate:             80.0%
+Total Requests:           40
+
+7. Large Dataset Response (10km radius)
+--------------------------------------------------------------------------------
+Average Response Time:    572.42 ms
+Median Response Time:     539.20 ms
+Min Response Time:        519.62 ms
+Max Response Time:        1003.17 ms
+95th Percentile (P95):    972.92 ms
+99th Percentile (P99):    1003.17 ms
+Standard Deviation:       107.54 ms
+Success Rate:             100.0%
+Total Requests:           50
+
+
+================================================================================
+PPT SUMMARY - KEY METRICS
+================================================================================
+
+1. Backend Health Check:
+  • Avg: 362 ms | P95: 849 ms | Success: 100.0%
+
+2. Geospatial Parking Search (PostGIS):
+  • Avg: 555 ms | P95: 593 ms | Success: 100.0%
+
+3. ML-Powered Free Parking Predictions:
+  • Avg: 995 ms | P95: 1309 ms | Success: 100.0%
+
+5. Database Read Performance (Multiple Locations):
+  • Avg: 553 ms | P95: 611 ms | Success: 100.0%
+
+6. Concurrent Load Test (50 Users):
+  • Avg: 5202 ms | P95: 9678 ms | Success: 80.0%
+
+7. Large Dataset Response (10km radius):
+  • Avg: 572 ms | P95: 973 ms | Success: 100.0%
+
